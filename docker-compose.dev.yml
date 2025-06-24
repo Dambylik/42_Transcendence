@@ -1,0 +1,81 @@
+volumes:
+  src_front_data_dist:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volumes/src_front/dist
+      o: bind
+  src_front_data_app:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volumes/src_front
+      o: bind
+  src_back_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volumes/src_back
+      o: bind
+  src_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volumes/src_back/uploads
+      o: bind
+
+networks:
+  transnet:
+    driver: bridge
+
+services:
+  front_end_nginx_test:
+    container_name: front_end_nginx
+    build : ./docker/nginx
+    volumes:
+      - src_front_data_dist:/usr/share/nginx/html/
+      - src_uploads:/usr/share/nginx/uploads/
+    restart: always
+    ports:
+      - 8080:80
+      - 4430:443
+    networks:
+      - transnet
+    env_file:
+      - .env
+
+  front_end_vite_new:
+    container_name: front_end_vite_new
+    build :
+      context: ./docker/vite
+      dockerfile : Dockerfile.dev
+    volumes:
+      - src_front_data_app:/app/
+    restart: always
+    ports:
+      - 5173:5173
+    networks:
+      - transnet
+    depends_on :
+      - front_end_nginx_test
+    env_file:
+      - .env
+
+  back_end_fastify:
+    container_name: back_end_fastify
+    build :
+      context: ./docker/fastify
+      dockerfile : Dockerfile.dev
+    volumes:
+      - src_back_data:/app/
+      - src_uploads:/app/uploads/
+    restart: always
+    expose:
+      - "3010"
+    networks:
+      - transnet
+    depends_on :
+      - front_end_nginx_test
+      - front_end_vite_new
+    env_file:
+      - .env

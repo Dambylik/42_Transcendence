@@ -1,0 +1,488 @@
+/* Import police futuriste */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+body {
+  background-color: #111;
+  color: white;
+  font-family: 'Orbitron', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+@font-face {
+  font-family: 'Big Shoulders';
+  src: url('/fonts/big-shoulders-display-bold.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Dark Red Neon Navbar */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(15, 0, 0, 0.85); /* plus sombre */
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  border-bottom: 4px solid transparent;
+  border-image: linear-gradient(90deg, #8B0000, #FF0000) 1;
+  box-shadow:
+    0 0 10px rgba(139,0,0,0.8),
+    0 0 20px rgba(255,0,0,0.6),
+    0 0 30px rgba(139,0,0,0.5),
+    inset 0 0 5px rgba(255,0,0,0.2);
+  z-index: 1000;
+}
+
+nav a {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 1.1rem;
+  position: relative;
+  background: linear-gradient(90deg, #ff2a6db3, #ff2a6d80);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  transition: text-shadow 0.3s, transform 0.2s;
+}
+
+nav a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  box-shadow:
+    0 0 8px #8B0000,
+    0 0 16px #FF0000,
+    inset 0 0 4px rgba(255,0,0,0.2);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+nav a:hover {
+  text-shadow:
+    0 0 10px #8B0000,
+    0 0 20px #FF0000,
+    0 0 30px #8B0000;
+  transform: translateY(-2px);
+}
+
+nav a:hover::after {
+  opacity: 1;
+}
+
+/* Écarter le contenu pour ne pas être caché sous le navbar */
+body {
+  padding-top: 80px;
+}
+
+/* Cyberpunk Theme Styles */
+.energy-waves {
+  background: linear-gradient(45deg, rgba(5, 217, 232, 0.05) 0%, rgba(255, 42, 109, 0.05) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.energy-waves::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    rgba(5, 217, 232, 0.1) 2px,
+    transparent 4px
+  );
+  animation: scanline 3s linear infinite;
+}
+
+.energy-waves::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    rgba(255, 42, 109, 0.1) 2px,
+    transparent 4px
+  );
+  animation: scanline-vertical 4s linear infinite;
+}
+
+/* Scanlines Effect */
+.scanlines {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(5, 217, 232, 0.1) 0px,
+    rgba(5, 217, 232, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    transparent 0%,
+    rgba(5, 0, 20, 0.2) 90%
+  );
+  pointer-events: none;
+}
+
+/* Animation for scanlines */
+@keyframes scanline {
+  0% {
+    transform: translateY(0%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes scanline-vertical {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(255, 42, 109, 0.7), 0 0 10px rgba(255, 42, 109, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(255, 42, 109, 0.8), 0 0 25px rgba(255, 42, 109, 0.6), 0 0 35px rgba(255, 42, 109, 0.4);
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.5s ease-out forwards;
+}
+
+.cyber-border {
+  position: relative;
+  z-index: 1;
+}
+
+.cyber-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid rgba(5, 217, 232, 0.3);
+  z-index: -1;
+}
+
+.cyber-border::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 1px solid rgba(255, 42, 109, 0.3);
+  z-index: -1;
+}
+
+.corner-brackets::before,
+.corner-brackets::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+.corner-brackets::before {
+  top: -2px;
+  left: -2px;
+  border-top: 2px solid rgba(5, 217, 232, 0.8);
+  border-left: 2px solid rgba(5, 217, 232, 0.8);
+}
+
+.corner-brackets::after {
+  bottom: -2px;
+  right: -2px;
+  border-bottom: 2px solid rgba(255, 42, 109, 0.8);
+  border-right: 2px solid rgba(255, 42, 109, 0.8);
+}
+
+/* Enhanced Header Styles */
+.header-logo {
+  position: relative;
+}
+
+.glow-text-pink {
+  text-shadow: 
+    0 0 5px rgba(255, 42, 109, 0.9),
+    0 0 10px rgba(255, 42, 109, 0.7),
+    0 0 15px rgba(255, 42, 109, 0.5),
+    0 0 20px rgba(255, 42, 109, 0.3);
+}
+
+.glow-text-cyan {
+  text-shadow: 
+    0 0 5px rgba(5, 217, 232, 0.9),
+    0 0 10px rgba(5, 217, 232, 0.7),
+    0 0 15px rgba(5, 217, 232, 0.5),
+    0 0 20px rgba(5, 217, 232, 0.3);
+}
+
+/* Enhanced navigation link styles */
+.nav-link {
+  position: relative;
+  transition: all 0.2s ease;
+  letter-spacing: 0.05em;
+}
+
+.nav-link:hover {
+  text-shadow: 
+    0 0 5px rgba(5, 217, 232, 0.7),
+    0 0 10px rgba(5, 217, 232, 0.5);
+}
+
+.nav-link-active {
+  color: #05d9e8;
+  text-shadow: 
+    0 0 5px rgba(5, 217, 232, 0.7),
+    0 0 10px rgba(5, 217, 232, 0.5);
+}
+
+/* Dark navy header background */
+.bg-navy-dark {
+  background-color: #0a0a25;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Cyberpunk Colors */
+.text-neon-pink {
+  color: #ff2a6d;
+}
+
+.text-neon-cyan {
+  color: #05d9e8;
+}
+
+.bg-cyber-dark {
+  background-color: #0a0a16;
+}
+
+.bg-cyber-darker {
+  background-color: #050510;
+}
+
+.border-neon-pink {
+  border-color: #ff2a6d;
+}
+
+.border-neon-cyan {
+  border-color: #05d9e8;
+}
+
+.font-cyber {
+  font-family: 'Orbitron', 'Big Shoulders Display', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-tech {
+  font-family: monospace, sans-serif;
+  letter-spacing: 0.1em;
+}
+
+/* Custom Cyberpunk Scrollbar */
+.cyber-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-track {
+  background-color: #050510;
+  border-radius: 4px;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #ff2a6d, #05d9e8);
+  border-radius: 4px;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #ff5a8d, #25f9ff);
+}
+
+/* Sidebar styles */
+.sidebar {
+  transition: width 0.3s ease-in-out;
+  overflow: hidden; /* Ensure content is hidden when collapsed */
+}
+
+.sidebar.hidden {
+  width: 0; /* Fully hide the sidebar */
+}
+
+.sidebar-logo {
+  cursor: pointer;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  background: url('../assets/neon_pong_table.png') no-repeat center center;
+  background-size: contain;
+}
+
+/* Make the logout button in the sidebar more visible */
+#sidebar-logout-btn {
+  background: linear-gradient(90deg, #ff2a6d, #05d9e8);
+  color: #fff;
+  font-weight: bold;
+  border: 2px solid #ff2a6d;
+  box-shadow: 0 0 10px #ff2a6d80, 0 0 20px #05d9e880;
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+#sidebar-logout-btn:hover, #sidebar-logout-btn:focus {
+  background: linear-gradient(90deg, #05d9e8, #ff2a6d);
+  border-color: #05d9e8;
+  box-shadow: 0 0 20px #05d9e8cc, 0 0 30px #ff2a6dcc;
+  color: #fff;
+}
+
+/* Sidebar collapse styles */
+.sidebar {
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1), min-width 0.3s cubic-bezier(0.4,0,0.2,1);
+  min-width: 20rem;
+  width: 20rem;
+  will-change: width;
+}
+.sidebar.sidebar-collapsed {
+  min-width: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border-right: none !important;
+}
+.sidebar.sidebar-collapsed > *:not(#sidebar-toggle-btn) {
+  display: none !important;
+}
+#sidebar-toggle-btn {
+  transition: right 0.3s, background 0.3s, box-shadow 0.3s;
+  z-index: 9999 !important;
+  position: fixed !important;
+  top: 2rem !important;
+  left: 0 !important;
+  right: auto !important;
+  background: #232946 !important;
+  border: 2px solid #ff2a6d !important;
+  box-shadow: 0 0 12px #ff2a6d55, 0 0 8px #22d3ee55;
+  opacity: 1 !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sidebar.sidebar-collapsed #sidebar-toggle-btn {
+  left: 0 !important;
+  /* reste visible même sidebar réduite */
+}
+
+#sidebar-toggle-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #ff2a6d;
+}
+
+/* Main content should expand when sidebar is collapsed */
+body .sidebar + main,
+body .sidebar + .flex-1,
+body .sidebar + .flex.flex-col,
+body .sidebar + .flex-1.flex.flex-col {
+  transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.sidebar.sidebar-collapsed + main,
+.sidebar.sidebar-collapsed + .flex-1,
+.sidebar.sidebar-collapsed + .flex.flex-col,
+.sidebar.sidebar-collapsed + .flex-1.flex.flex-col {
+  margin-left: 0 !important;
+}
+
+/* Neon glow border for Pong container */
+.neon-glow-border {
+  box-shadow:
+    0 0 24px 4px #05d9e8,
+    0 0 48px 8px #ff2a6d,
+    0 0 0 4px #0a0a25 inset;
+  border-radius: 1.5rem;
+  border: 2px solid #05d9e8;
+  background: linear-gradient(120deg, #0a0a25 80%, #ff2a6d22 100%);
+  position: relative;
+}
+
+/* Neon glow for Pong canvas */
+.neon-glow-canvas {
+  box-shadow:
+    0 0 32px 0 #05d9e8cc,
+    0 0 64px 0 #ff2a6dcc,
+    0 0 0 2px #ff2a6d inset;
+  border-radius: 1rem;
+  border: 2px solid #ff2a6d;
+  background: #0a0a16;
+}

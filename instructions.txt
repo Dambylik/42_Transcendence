@@ -1,0 +1,138 @@
+--- Les différents types de travaux :
+
+FRONT END :
+- /room/123... : affiche les differents joueurs (pseudos), un espace chat, un bouton "lancer partie". On doit pouvoir ajouter en ami des gens via bouton, voir leur avatar...
+chaque profil peut proposer un lien pour voir le profil, on peut aussi ajouter des gens via un input type="text"
+- /profile/654 : affiche un profil bouton pour bloquer/debloquer, affiche stats des différents matchs avec historique
+- /myprofile : permet de modifier mes données, supprimer mon compte
+- /play/456... : affiche la vraie partie (le jeu ping pong), avec un decompte de 3,2,1... Go
+- / : affiche l'index qui propose soit une connexion soit une inscription (on change l'url par /login ou /register)
+- / (si connecté) : affiche un input type="text" pour saisir le code afin de rejoindre une room ET un bouton pour créer une room ET un bouton pour matchmaking random
+- /friends : permet de voir ma liste d'amis ainsi que les chats avec eux, peut recevoir des invitations pour une room, permet de voir mes demandes amis et ajouter des amis via un bouton.
+- /random : permet de lancer le matchmaking pour trouver un 1v1 facilement
+
+BACK END :
+HTTP (contienent le jwt dans l'entete http) : 
+- /api/create_room : crée une room et renvoie l'id de la room. Prend dans le body { id_creator, nb_players } J'ajoute mon id dans la bdd pour la game.
+- /api/players_in_room : Retourne au format JSON la liste de tous les joueurs dans la room. Prend en body { id_room }
+- /api/join_room : Renvoie rien. Prend en body { id_room } 
+
+
+
+HTTP (social) :
+- /api/block_user/:id Prend rien en body (GET) : Bloque un utilisateur en ajoutant une entrée dans la table `blocked_users`.
+- /api/unblock_user/:id (GET) : Débloque un utilisateur en supprimant l'entrée correspondante dans la table `blocked_users`.
+- /api/change_profile : Prend en body { username, email, password, avatar }
+- /api/delete_profile : (GET)
+- /api/add_user : Prend en body { username }
+- /api/remove_user : Prend en body { username }
+- /api/send_message_to_user : Prend en body { username, message }
+- /api/register : Prend en body { username, email, password, avatar }, retourne : valid si c'est bon
+- /api/register_qrcode : Retourne un qr code pour pouvoir ajouter la clé secrete TOTP (2FA) si l'inscription a réussi
+- /api/login : Prend en body { username, password , (optionnel : code TOTP 2FA)}
+- /api/invite : Prend en body { username, my room id  } (! cela crée aussi automatiquement une room et ajoute les joueurs, ca change l'interface, pour ajouter les autres)
+- /api/is_online/:id
+
+WS :
+- /api/ws/room/123?jwt=abc123 (premiere route : la room) :
+	Quand quelqu'un rentre dans la room :crée un conteneur et ajoute un couple (socket / id_player) pour chaque user, si un user n'est pas la depuis trop longtemps : je close la connexion et je le retire de la bdd pour cette room.
+	Quand je recois un message, je l'envoie a tout le monde dans le chat
+	Quand je recois le signal pour commencer la partie : crée les groupes de 2, crée une ligne dans la bdd pour chaque match(id des deux joueurs). Envoie un message a tous les clients de la game pour leur dire de rejoindre une nouvelle route WS
+	Quand je recois le signal pour exclure quelqu'un de la room : je vérifie si la personne est admin et je le kick
+- /api/ws/play/345?jwt=abc123 (deuxieme route : la partie 1v1) :
+	Attend que les deux joueurs soient connecté au ws  puis met dans un conteneur les deux paires associés au deux joueurs (socket / id_player), remplit la ligne de la bdd en rapport avec le match 1v1 (indique heure, id des joueurs). Envoie le decompte 3,2,1.. Go puis enregistre la partie
+
+
+--- Le random :
+Premiere partie (trouver un joueur)
+- Des que j'arive sur la route /random :
+- Je me connecte a la route backend /api/ws/random
+- J'insert dans la bdd mon id_player et je me met a search : true, j'insert aussi {mon socket et id_player} dans un random_waiting[id_player] (une variable globale)
+
+- Dans un setinterval je check la bdd pour voir si il y a deux joueurs qui cherchent une partie avec search == true
+
+- Des qu'un deuxieme joueur est trouvé : je crée une nouvelle ligne dans game_duo avec les deux id_player et avec finish == false
+- J'envoie un message ws aux deux pour dire que la partie va démarrer dans la fonction setinterval précédente (j'obtiens le socket avec la variable random_waiting)
+- Je met search a false dans la bdd
+
+
+Deuxieme partie (jouer)
+- Quand les deux joueurs ont recu le ws pour dire que ca va démarrer : les deux se connectent a /api/ws/play/345?jwt=abc123
+- Une variable globale duo_play[345] contient deux objets pour les deux joueurs {id_player, socket} du coté serveur
+- Je check si les deux joueurs sont présents (dans un setinterval) du coté serveur
+- La partie commence : j'envoie aux deux joueurs un message pour dire que la partie commence
+
+
+
+En jeu :
+- Des que le premier joueur appuie sur une touche dans le jeu sur navigateur : ca envoie un json avec les nouvelles coordonnées de la raquete du joueur sur /api/ws/play/345 VERS le coté premier joueur du serveur. Stocke les coordonnées dans une variable globale coordonnes[345].first_player
+- Pareil pour le deuxieme joueur mais dans .second_player
+- Coté serveur : envoie au premier joueuer et au deuxieme les nouvelles coordonneés (de la balle, raquette) situées dans coordonneés[345] toutes les 50ms dans une fonction setinterval, pour toutes les games duo
+(c'est le serveur qui calcule la position de la balle toutes les 50ms, c'est au client de faire de l'interpolation pour lisser le mouvement de la balle OU de faire une extrapolation : j'ai une préférence pour l'extrapolation)
+
+Quand c'est fini : je met finish a true dans la bdd
+
+
+
+---- LES TACHES
+1ere personne) Creer le formulaire front end pour l'inscription, la connexion (route /)
+Puis créer la route /random : crée une connexion ws (/api/ws/random), affiche un chargement tant qu'une partie n'a pas été trouvée.
+Change la route vers /play/id_du_match des qu'une partie a été trouvée.
+
+2e personne) Créer le jeu pong (route /play/345 par ex) : commence par se connecter au ws (/api/ws/play/345?jwt=abc123), des que le serveur envoie un message pour dire que la partie commence : affiche le vrai jeu (les raquettes et la balle). Toutes les touches appuyées envoient une information au serveur via ws. Le serveur envoie a chaque 50ms via ws la position de la raquette ennemie et de la balle. (C'est au serveur de TOUJOURS calculer la position de la balle)
+
+3e personne ) Créer tout le backend pour l'inscription, (2FA, peut etre plus tard), (Oauth, peut etre plus tard), base de données, matchmaking
+
+--- LE PLAN
+1) inscription + connexion
+2) Une fois connecté : 
+
+on peut créer une room a l'aide d'un bouton qu'on stocke dans une bdd (id de la room, id du joueur createur, nb de joueurs dans la room, id de tous les joueurs dans la room)
+On appuie sur un bouton qui fait une requete fetch /api/create_room
+
+Puis on change la route dans le SPA : /room/123
+
+
+3) Les personnes se connectent a une room grace a l'id de la room (on ajoute l'id des joueurs dans la room dans la bdd)
+
+On fait une requete fetch /api/join_room : j'ajoute mon id dans la bdd pour la game.
+
+Dans le SPA : /room/123
+
+
+
+Requete POST pour recuperer les infos sur la room (API : /api/room/123/players_in_room...)
+Actualisation toutes les secondes pour voir sil qqun a rejoint ou quitté la room (a voir : sinon je fais la methode ws)
+Si il y a un probleme de JWT : on quitte la page et on affiche une erreur.
+
+
+
+Des que j'ai recu la réponse a l'api /api/room/123/players_in_room... :
+J'initialise une connexion websocket avec JWT (/api/ws/room/123?jwt=abc123) : si JWT pas bon : affiche erreur
+Je crée une structure contenant des paires : socket et JWT dans le serveur
+Si un joueur se deco ou quitte la room on met a jour la bdd et on met a jour la liste des joueurs via ws du serveur vers les autres joueurs (JSON contenant la liste de tous les joueurs).
+
+
+3) Des qu'on lance une partie (lorsque l'admin de la room clique sur le bouton start) : 
+
+
+Un message ws est envoyé du créateur de la room vers le serveur pour informer le serveur que la partie va commencer. (/api/ws/room/123) (OU via fetch http)
+
+le serveur choisit 2 personnes a chaque fois : on crée une nouvelle entrée dans une table game_duo de la bdd : id_game, id_first_player, id_second_player, id_du_gagnant.
+On envoie a partir du serveur via ws a tous les clients l'id_game qui leur a été attribué.
+
+
+Dans le SPA : /play/345 (345 fait référence à id_game)
+
+Les clients démarrent une nouvelle connexion ws des qu'ils ont recu l'indication que la partie va commencer ( /api/ws/play/345?jwt=abc123) (remplacer 345 par l'id_game)
+Cela se fait via une demande du client.
+
+Des que le ws ( /api/ws/play/345?jwt=abc123)  recoit une demande de connexion (coté serveur), on associe le jwt avec le socket dans un objet, un tableau contenant les deux objets (joueur A et joueur B) est présent.
+On associe le joueur A a id_first_player dans la bdd avec le bon id_game, pareil pour joueur B : id_second_player.
+
+
+
+Des que les 2 joueurs sont connectés au nouveau ws (/api/ws/play/345) : 
+On lance un compte a rebour : 3 2 1 (coté serveur), puis la partie commence : le serveur envoie via ws une info aux deux joueurs pour dire que la partie a commencé.
+
+Si un joueur envoie une donnée via ws (), le serveur essaie de trouver l'autre joueur grace au socket contenu dans le tableau contenant les deux joueurs {socket : socket, jwt : jwt} puis envoie les données (coordonées de la balle et de la plateforme du joueur A) vers le joueur B.

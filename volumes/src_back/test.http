@@ -1,0 +1,240 @@
+# ATTENTIONS AUX PORTS !!! il faut utiliser 4430
+
+
+
+### POST Inscription
+POST https://localhost:4430/api/ HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "totoa",
+  "password": "test"
+}
+
+
+
+GET https://localhost:4430/api/test HTTP/1.1
+
+
+
+### Create room
+POST https://localhost:4430/api/create_room3 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "nom_de_la_room"
+}
+
+// Les cookies sont envoyés et stockés utomatiquement avec l'extension REST Client
+
+////// TEST COOKIES
+/// Cookie test pour toto : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJ0b3RvIiwiYXZhdGFyX3VybCI6bnVsbCwiaWF0IjoxNzQ4NDUzMDQ0fQ.hk1B3zZn1Jj8zGhur6630tiFeNqu8IjfbEnwu2lZayc
+
+### @clear-cookie-jar
+
+### Récupère les infos pour le profile
+GET https://localhost:4430/api/profile/1
+
+### Renvoi mon pseudo
+GET https://localhost:4430/api/test_my_profile
+
+/////////////
+
+### Test
+GET https://localhost:4430/api/test HTTP/1.1
+
+### POST Inscription
+POST https://localhost:4430/api/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "avv",
+  "password": "aeee"
+}
+
+### POST login (exist)
+POST https://localhost:4430/api/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "avv",
+  "password": "sss"
+}
+
+### POST login (exist) avec TOTP
+POST https://localhost:4430/api/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "toto",
+  "password": "test",
+  "code_totp": "794163"
+}
+
+### Met en place le 2FA pour le compte actuel
+GET https://localhost:4430/api/2fa/setup HTTP/1.1
+
+
+////////////// Profils (user management)
+
+### Récupère les infos pour le profile
+GET https://localhost:4430/api/profile/4
+
+### Met a jour le profile
+POST https://localhost:4430/api/update_profile
+Content-Type: application/json
+
+{
+  "username": "avv",
+  "password" : "sss"
+}
+
+### Récupère les infos pour le profile
+GET https://localhost:4430/api/friends
+
+### Ajoute un ami
+GET https://localhost:4430/api/add_friend/2
+
+
+### Supprime un ami
+GET https://localhost:4430/api/remove_friend/2
+
+
+### Obtient l'historique des matchs d'un utilisateur
+GET https://localhost:4430/api/history/1
+
+
+
+################
+
+
+
+### Create room
+POST https://localhost:4430/api/create_room HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "nom_de_la_room"
+}
+
+### Rejoindre une room (parametre de l'url : id_room)
+GET https://localhost:4430/api/join_room/1
+
+
+
+### Lancer le premier round (envoi un msg ws a tous ceux qui ont été sélectionnés pour le premier round) (parametre de l'url : id_room)
+GET https://localhost:4430/api/start/69
+
+###  Récupérer la liste des matchs 1v1 pour un room_id
+GET https://localhost:4430/api/matchs_current/69
+
+
+###  Récupérer la liste des joueurs dans une room
+GET https://localhost:4430/api/rooms_players/23
+
+
+
+###  Rejeter un joueur d'une room
+GET https://localhost:4430/api/reject_from_room/85/49
+
+
+###  Rejeter tout le monde dans la room (supprime la room)
+GET https://localhost:4430/api/close_room/80
+
+
+
+###  Voir si j'ai un match 1v1 accessible immediatement
+GET https://localhost:4430/api/can_play/7
+
+
+###  Arrete un match 1v1 deja commencé
+GET https://localhost:4430/api/stop_match/1
+
+
+###  TEST pour var globale
+GET https://localhost:4430/api/test_match/29
+
+
+###  Vérifie si un tournoi a commencé
+GET https://localhost:4430/api/tournament_started/19
+
+###  Vérifie si un joueur s'est deco brusquement d'une room (fermeture de l'onglet par ex)
+GET https://localhost:4430/api/closed_ws_in_room
+
+###  Enleve mon user id du set des connexions ws room coupés brusquement
+GET https://localhost:4430/api/forgive_closed_ws_in_room
+
+
+###  Vérifie si le tournoi avec id xxx s'est terminé (normalement ou suite a une erreur)
+GET https://localhost:4430/api/tournament_finished/4
+
+
+
+
+
+
+###  Vérifie si le tournoi avec id xxx s'est terminé (normalement ou suite a une erreur)
+GET https://localhost:4430/api/im_admin/1
+
+
+
+
+###  Vérifie si le tournoi avec id xxx s'est terminé (normalement ou suite a une erreur)
+GET https://localhost:4430/api/winner/3
+
+
+
+
+###  Vérifie si la personne a tenté de tricher en modifiant le localstorage
+POST https://localhost:4430/api/valid_localstorage
+Content-Type: application/json
+
+{
+  "local_user_id": 1,
+  "local_is_admin" : true,
+  "local_room_id" : 18
+}
+
+
+###  Quitte la room avant le début du tournoi
+GET https://localhost:4430/api/quit_room
+
+###  Obtient le resultat de mon dernier match dans ma room
+GET https://localhost:4430/api/last_match_result_room
+
+###  Invite un joueur dans ma room
+GET https://localhost:4430/api/invite_player_tournament/66
+
+###  Invite un joueur dans ma room
+GET https://localhost:4430/api/my_invitations
+
+###  Supprime toutes les invitations pour une room de la base de données
+GET https://localhost:4430/api/remove_invitation/1
+
+###  Vérifie si un tournoi a déja commencé
+GET https://localhost:4430/api/room_started/16
+
+###  Retourne le numero du round de ma room
+GET https://localhost:4430/api/my_room_round
+
+
+###  Vérifie si je suis deja connecte a un match 1V1 WS
+GET https://localhost:4430/api/update_connected_to_match/6
+
+###  Vérifie si je suis deja connecte a un match 1V1 WS
+GET https://localhost:4430/api/check_connected_to_match/6
+
+###  Vérifie si je suis deja connecte a un match 1V1 WS
+GET https://localhost:4430/api/update_gave_up/6
+
+###  Vérifie si je suis deja dans une room
+GET https://localhost:4430/api/already_in_room
+
+
+
+
+###  Vérifie si je suis deja dans une room
+GET https://localhost:4430/api/my_room_nb_players
+
+
+
