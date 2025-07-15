@@ -44,6 +44,19 @@ db.all = util.promisify(db.all);
   `);
 })();
 
+(async () => {
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS connect4_online_rooms_players (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_player INTEGER NOT NULL,
+      id_room INTEGER NOT NULL,
+      is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at DATETIME DEFAULT (datetime('now')),
+      UNIQUE(id_room, id_player)
+    )
+  `);
+})();
+
 // Ajout des colonnes elo, xp et level à la table users si elles n'existent pas
 (async () => {
   await db.run(`
@@ -108,6 +121,21 @@ db.all = util.promisify(db.all);
       sender_id INTEGER NOT NULL,
       receiver_id INTEGER NOT NULL,
       content TEXT NOT NULL,
+      created_at DATETIME DEFAULT (datetime('now'))
+    )
+  `);
+})();
+
+(async () => {
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS connect4_online_matchs_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      first_player INTEGER NOT NULL,
+      second_player INTEGER NOT NULL,
+      id_room INTEGER NOT NULL,
+      winner_id INTEGER DEFAULT NULL,
+      board TEXT DEFAULT NULL, -- JSON string of the board state
+      current_player INTEGER DEFAULT 1, -- 1 for Player 1, 2 for Player 2
       created_at DATETIME DEFAULT (datetime('now'))
     )
   `);

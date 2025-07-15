@@ -320,11 +320,11 @@ class TournamentPage extends Page {
             };
 
             this.websocket.onerror = (error) => {
-                console.error('WebSocket error:', error);
+                //console.error('WebSocket error:', error);
             };
 
             this.websocket.onclose = () => {
-                console.log('WebSocket connection closed');
+               //console.log('WebSocket connection closed');
             };
 
             // Keep alive

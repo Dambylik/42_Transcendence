@@ -4,12 +4,10 @@ import { handleAvatarUpload } from '../../utils/avatarUtils';
 export class Sidebar {
   private username: string = 'LOADING...';
   private router?: Router;
-  private inactivityTimeout: any;
 
   constructor(router?: Router) {
     this.router = router;
     this.fetchUsername();
-    this.setupInactivityDetection();
     
   document.addEventListener('avatar-updated', ((event: Event) => {
       const customEvent = event as CustomEvent<{avatarUrl: string}>;
@@ -28,6 +26,15 @@ export class Sidebar {
   }
 
   private async fetchUsername(): Promise<void> {
+    // Skip API call if user is not authenticated
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    if (!authToken) {
+      //console.log('User not authenticated, skipping API call');
+      this.username = 'GUEST';
+      this.updateUsername();
+      return;
+    }
+
     const maxRetries = 3;
     let retries = 0;
 
@@ -41,13 +48,26 @@ export class Sidebar {
             (window as any).user = { 
               ...((window as any).user || {}), 
               id: data.id || null,
-              username: data.username 
+              username: data.username,
+              avatar_url: data.avatar_url || 'default.png',
+              level: data.level || 0,
+              xp: data.xp || 0
             };
             this.updateUsername();
+            if (data.avatar_url) {
+              this.updateAvatarInSidebar(this.getAvatarUrl(data.avatar_url));
+            }
             return true;
           } else {
             console.warn('Incomplete user data in API response:', data);
           }
+        } else if (response.status === 401) {
+          // User is not authenticated, clear any stored tokens and stop retrying
+          localStorage.removeItem('authToken');
+          sessionStorage.removeItem('authToken');
+          this.username = 'GUEST';
+          this.updateUsername();
+          return true; // Stop retrying
         } else {
           console.error('Failed to fetch user data, status:', response.status);
         }
@@ -90,24 +110,7 @@ export class Sidebar {
     }
   }
 
-  private setupInactivityDetection(): void {
-    const resetInactivityTimer = () => {
-      clearTimeout(this.inactivityTimeout);
-      this.inactivityTimeout = setTimeout(() => this.setAFKStatus(), 300000); // 5 minutes
-    };
 
-    window.addEventListener('mousemove', resetInactivityTimer);
-    window.addEventListener('keydown', resetInactivityTimer);
-    resetInactivityTimer();
-  }
-
-  private async setAFKStatus(): Promise<void> {
-    try {
-      await fetch('/api/set_afk', { method: 'POST', credentials: 'include' });
-    } catch (err) {
-      console.error('Failed to set AFK status:', err);
-    }
-  }
   
   private updateAvatarInSidebar(avatarUrl: string): void {
     const avatarContainers = document.querySelectorAll('.sidebar .avatar-container');
@@ -117,6 +120,22 @@ export class Sidebar {
         img.src = avatarUrl;
       }
     });
+  }
+
+  private getAvatarUrl(avatar_url: string): string {
+    if (!avatar_url || avatar_url === 'default.png') {
+      return '/uploads/default.png';
+    }
+    
+    if (avatar_url.startsWith('/')) {
+      return avatar_url;
+    }
+    
+    if (avatar_url.startsWith('uploads/')) {
+      return '/' + avatar_url;
+    }
+    
+    return '/uploads/' + avatar_url;
   }
 
   async render(): Promise<string> {
@@ -137,9 +156,7 @@ export class Sidebar {
       }
     }
 
-    const avatarUrl = user?.avatar_url
-      ? (user.avatar_url.startsWith('/') ? user.avatar_url : (user.avatar_url.startsWith('uploads/') ? '/' + user.avatar_url : '/uploads/' + user.avatar_url))
-      : '/uploads/default.png';
+    const avatarUrl = this.getAvatarUrl(user?.avatar_url || 'default.png');
 
     // Ajout : styles pour la sidebar et le bouton toggle
     return `
@@ -242,9 +259,9 @@ export class Sidebar {
             <div class="absolute -bottom-2 -right-2 w-6 h-6 border-r-2 border-b-2 border-neon-pink"></div>
           </div>
           <h2 class="text-center text-neon-cyan font-cyber text-xl tracking-wider sidebar-username">${user?.username || this.username}</h2>
-          <p class="text-center text-gray-400 font-tech text-sm mt-2">LEVEL ${user?.level || 0}</p>
-          <p class="text-center text-gray-400 font-tech text-sm mt-2">XP: ${user?.xp || 0}</p>
-          <div class="text-center text-neon-pink text-xs mt-2 animate-pulse">CLICK TO UPLOAD AVATAR</div>
+          <p class="text-center text-gray-400 font-tech text-sm mt-2">LEVEL ${user?.level || 42}</p>
+          <div class="text-center text-neon-pink text-xs mt-2">CLICK TO UPLOAD AVATAR</div>
+          <p class="text-center text-gray-400 font-tech text-sm mt-2">${user.id || null}</p>
         </div>
 
         <!--Profile -->
@@ -357,6 +374,38 @@ export class Sidebar {
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
+
+
+          // Je coupe la connexion WS
+          try {
+            const response = await fetch('https://localhost:4430/api/quit_room', {
+            method: 'GET',
+            credentials: 'include'
+            });
+            if (!response.ok)
+            {
+            throw new Error('erreur http : ' + response.status);
+            }
+            const result = await response.json();
+            if (result.success == true)
+            {
+              // alert("Jai bien quitte la room dans lqauelle jetais");
+            }
+            else if (result.success == false)
+            {
+              // alert("Je ne suis pas dans une room, pas besoin de la quitter");
+            }
+          } catch (err)
+          {
+            // alert("erreur denvoi quitRoom() dans logout : " + err);
+          }
+          // Je supprime le sessionStorage
+          sessionStorage.removeItem('room');
+          sessionStorage.removeItem('finished');
+          sessionStorage.removeItem('tournament_started');
+          sessionStorage.removeItem('tournament_finished');
+          sessionStorage.removeItem('match_id');
+
         
         // NOUVEAU: Déclencher l'événement de déconnexion
         document.dispatchEvent(new CustomEvent('force-logout'));
@@ -364,6 +413,15 @@ export class Sidebar {
         try {
           await fetch('/api/logout', { method: 'POST', credentials: 'include' });
         } catch {}
+        
+        try {
+          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            // Use any type to access disableAutoSelect which may not be in type definitions
+            (google.accounts.id as any).disableAutoSelect?.();
+          }
+        } catch (error) {
+          console.log('Google session clearing not available:', error);
+        }
         
         // Utilise la même logique de nettoyage que sign_out_all
         this.clearUserSession();
@@ -404,6 +462,17 @@ export class Sidebar {
   // NOUVEAU : Méthode centralisée pour nettoyer la session utilisateur
   private clearUserSession(): void {
     (window as any).user = null;
+    
+    // Clear Google session to remove "Signed in as ..." from Google button
+    try {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        // Use any type to access disableAutoSelect which may not be in type definitions
+        (google.accounts.id as any).disableAutoSelect?.();
+      }
+    } catch (error) {
+      console.log('Google session clearing not available:', error);
+    }
+    
     // Supprime tous les cookies côté client
     const cookiesToClear = ['token', 'session_id'];
     cookiesToClear.forEach(cookieName => {

@@ -37,7 +37,11 @@ db.all = util.promisify(db.all);
             let actual_room = await db.get("SELECT * FROM rooms WHERE id = ?", [room_id]);
             const actual_round = Number(actual_room.round);
 
-            const room_db = await db.all("SELECT * FROM matchs_history WHERE id_room = ? AND bypass = ? AND round = ? ORDER BY id ASC", [room_id, false, actual_round]);
+            // Déterminer le type de jeu de la room
+            const isConnect4 = actual_room.game_type === 'connect4';
+            const tableName = isConnect4 ? 'connect4_online_matchs_history' : 'matchs_history';
+
+            const room_db = await db.all(`SELECT * FROM ${tableName} WHERE id_room = ? AND bypass = ? AND round = ? ORDER BY id ASC`, [room_id, false, actual_round]);
 
             for (const line of room_db)
             {
@@ -90,6 +94,10 @@ db.all = util.promisify(db.all);
             throw new Error("error update round");
         }
 
+        // Déterminer le type de jeu de la room
+        const isConnect4 = actual_room.game_type === 'connect4';
+        const tableName = isConnect4 ? 'connect4_online_matchs_history' : 'matchs_history';
+
         
         // Génère la liste des joueurs pour un seul round et les met dans un tableau tabl_players
         const players_room = await db.all("SELECT * FROM rooms_players WHERE id_room = ? AND eliminated = false ORDER BY id ASC", [id_room]);
@@ -114,10 +122,10 @@ db.all = util.promisify(db.all);
                 try
                 {
                     // On insert dans la base de données TOUTES les lignes pour les nouveaux matchs
-                    await db.run("INSERT INTO matchs_history (first_player, second_player, id_room, round) VALUES (?, ?, ?, ?)", [player_id_first, player_id_second, id_room, new_round]);
+                    await db.run(`INSERT INTO ${tableName} (first_player, second_player, id_room, round) VALUES (?, ?, ?, ?)`, [player_id_first, player_id_second, id_room, new_round]);
                 
-                    // On récupère l'id du match inséré dans matchs_history
-                    inserted_match = await db.get("SELECT * FROM matchs_history WHERE first_player = ? AND second_player = ? AND id_room = ? ORDER BY id DESC LIMIT 1", [player_id_first, player_id_second, id_room]);
+                    // On récupère l'id du match inséré
+                    inserted_match = await db.get(`SELECT * FROM ${tableName} WHERE first_player = ? AND second_player = ? AND id_room = ? ORDER BY id DESC LIMIT 1`, [player_id_first, player_id_second, id_room]);
                     if (!(inserted_match))
                     {
                         throw new Error("error match created not found");
@@ -145,10 +153,10 @@ db.all = util.promisify(db.all);
                 try
                 {
                     // On insert dans la base de données TOUTES les lignes pour les nouveaux matchs (sauf bypass)
-                    await db.run("INSERT INTO matchs_history (first_player, second_player, id_room, round) VALUES (?, ?, ?, ?)", [player_id_first, player_id_second, id_room, new_round]);
+                    await db.run(`INSERT INTO ${tableName} (first_player, second_player, id_room, round) VALUES (?, ?, ?, ?)`, [player_id_first, player_id_second, id_room, new_round]);
                 
-                    // On récupère l'id du match inséré dans matchs_history
-                    inserted_match = await db.get("SELECT * FROM matchs_history WHERE first_player = ? AND second_player = ? AND id_room = ? ORDER BY id DESC LIMIT 1", [player_id_first, player_id_second, id_room]);
+                    // On récupère l'id du match inséré
+                    inserted_match = await db.get(`SELECT * FROM ${tableName} WHERE first_player = ? AND second_player = ? AND id_room = ? ORDER BY id DESC LIMIT 1`, [player_id_first, player_id_second, id_room]);
                     if (!(inserted_match))
                     {
                         throw new Error("error match created not found");
@@ -165,7 +173,7 @@ db.all = util.promisify(db.all);
 
             // Insert le bypass (match considéré gagnant d'office) pour le dernier joueur de la room
             const player_id_first = Number(players_room[nb_players].id_player);
-            await db.run("INSERT INTO matchs_history (first_player, second_player, id_room, bypass, round) VALUES (?, ?, ?, ?, ?)", [player_id_first, 0, id_room, true, new_round]);
+            await db.run(`INSERT INTO ${tableName} (first_player, second_player, id_room, bypass, round) VALUES (?, ?, ?, ?, ?)`, [player_id_first, 0, id_room, true, new_round]);
         }
 
         /// CELA NE SERT A RIEN JE PENSE : a verifier
@@ -429,14 +437,28 @@ db.all = util.promisify(db.all);
     // Vérifie si tous les matchs sont finis pour un round
     async function checkIfRoundEnded(room_id, round)
     {
-        const all_matchs_room = await db.all('SELECT * FROM matchs_history WHERE id_room = ? AND round = ? AND bypass = false', [room_id, round]);
-        for (const real_match of all_matchs_room)
+        // Check both pong and connect4 matches for this round
+        const all_pong_matchs = await db.all('SELECT * FROM matchs_history WHERE id_room = ? AND round = ? AND bypass = false', [room_id, round]);
+        const all_connect4_matchs = await db.all('SELECT * FROM connect4_online_matchs_history WHERE id_room = ? AND round = ? AND bypass = false', [room_id, round]);
+        
+        // Check if all pong matches are finished
+        for (const real_match of all_pong_matchs)
         {
             if (!real_match.winner_id)
             {
                 return false;
             }
         }
+        
+        // Check if all connect4 matches are finished
+        for (const real_match of all_connect4_matchs)
+        {
+            if (!real_match.winner_id)
+            {
+                return false;
+            }
+        }
+        
         return true;
     }
 

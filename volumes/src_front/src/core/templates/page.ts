@@ -1,12 +1,16 @@
 import { createHeader } from './header';
 import { Router } from '../../../router/Router';
 import Sidebar from './sidebar';
+import { showNotification } from '../../utils/notifications';
+import WebSocketManager from '../../utils/WebSocketManager';
 
 abstract class Page {
   protected container: HTMLElement;
   protected router: Router | null = null;
   protected sidebar: Sidebar;
-  private sessionSocket?: WebSocket;
+  protected wsManager = WebSocketManager.getInstance();
+  private static sessionManagementSetup = false;
+  private static unsubscribeSession?: () => void;
   static TextObject = {};
 
   constructor(id: string, router?: Router) {
@@ -15,7 +19,14 @@ abstract class Page {
     this.container.className = 'page-container'; // Ajout d'une classe pour identification
     this.router = router || null;
     this.sidebar = new Sidebar(router || undefined);
-    this.setupSessionManagement();
+    // Only setup session management after checking if user is authenticated
+    this.checkAuthAndSetupSession();
+    
+    // Only setup session management once across all page instances
+    if (!Page.sessionManagementSetup) {
+      this.setupSessionManagement();
+      Page.sessionManagementSetup = true;
+    }
   }
 
   protected createHeaderTitle(text: string) {
@@ -43,35 +54,42 @@ abstract class Page {
     await this.sidebar.setupEventListeners(this.container, this.router === null ? undefined : this.router);
   }
 
+  private async checkAuthAndSetupSession(): Promise<void> {
+    try {
+      // Only setup session management if we're not on public pages
+      const currentPath = window.location.pathname;
+      const publicPaths = ['/login', '/register', '/'];
+      
+      if (publicPaths.includes(currentPath)) {
+        console.log('On public page, skipping session management setup');
+        return;
+      }
+
+      // Check if user is authenticated by trying to access /api/me
+      const response = await fetch('/api/me', { credentials: 'include' });
+      if (response.ok) {
+        // User is authenticated, setup session management
+        this.setupSessionManagement();
+      } else {
+        // User is not authenticated, no need for session management
+        console.log('User not authenticated, skipping session management setup');
+      }
+    } catch (error) {
+      console.log('Auth check failed, skipping session management setup:', error);
+    }
+  }
+
   private setupSessionManagement(): void {
     try {
-      this.sessionSocket = new WebSocket('wss://localhost:4430/api/ws/session_management');
-      
-      this.sessionSocket.addEventListener('message', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'force_logout') {
-            this.handleForceLogout();
-          }
-        } catch (err) {
-          console.error('Error parsing session message:', err);
+      Page.unsubscribeSession = this.wsManager.subscribeToSessionManagement((data) => {
+        if (data.type === 'force_logout') {
+          this.handleForceLogout();
         }
       });
-
-      this.sessionSocket.addEventListener('error', (err) => {
-        console.error('Session WebSocket error:', err);
-      });
-
-      this.sessionSocket.addEventListener('close', () => {
-        // Tentative de reconnexion après 3 secondes
-        setTimeout(() => {
-          if (!this.sessionSocket || this.sessionSocket.readyState === WebSocket.CLOSED) {
-            this.setupSessionManagement();
-          }
-        }, 3000);
-      });
+      console.log('Session management WebSocket setup successful');
     } catch (err) {
       console.error('Error setting up session management:', err);
+      // Don't throw the error, just log it
     }
   }
 
@@ -94,10 +112,17 @@ abstract class Page {
     localStorage.removeItem('session_id');
     localStorage.removeItem('auth_token');
 
+    // Clear Google session to remove "Signed in as ..." from Google button
+    try {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        (google.accounts.id as any).disableAutoSelect?.();
+      }
+    } catch (error) {
+      console.log('Google session clearing not available:', error);
+    }
+
     // Affiche une notification
-    import('../../utils/notifications').then(({ showNotification }) => {
-      showNotification('You have been signed out from all devices', 'success');
-    });
+    showNotification('You have been signed out from all devices', 'success');
 
     // Redirection vers la page de connexion
     setTimeout(() => {
@@ -109,13 +134,18 @@ abstract class Page {
     }, 1000);
   }
 
+  public static cleanupSessionManagement(): void {
+    if (Page.unsubscribeSession) {
+      Page.unsubscribeSession();
+      Page.unsubscribeSession = undefined;
+      Page.sessionManagementSetup = false;
+    }
+  }
+
   abstract render(): Promise<HTMLElement>;
 
   destroy(): void {
-    // AMÉLIORATION : Fermer la connexion WebSocket lors de la destruction
-    if (this.sessionSocket) {
-      this.sessionSocket.close();
-    }
+    
     // AMÉLIORATION : Nettoyage plus agressif du container
     if (this.container) {
       this.container.innerHTML = '';

@@ -237,4 +237,14 @@ GET https://localhost:4430/api/already_in_room
 GET https://localhost:4430/api/my_room_nb_players
 
 
+###  Recupere l'historique des matchs 1v1 (id 193 pour aucun match joué et 134 sinon ou 171)
+GET https://localhost:4430/api/matchs_profile/193
+
+
+
+
+###  Vérifie si le 2FA est activé pour mon compte
+GET https://localhost:4430/api/2fa/activated
+
+
 

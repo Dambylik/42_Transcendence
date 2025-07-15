@@ -30,14 +30,6 @@ class TestInvite extends Page {
         <div class="flex-shrink-0">
         </div>
         
-        <!-- Navigation links on the right -->
-        <nav class="flex items-center space-x-8">
-          <a href="/" data-route="/" class="header-logo text-neon-pink hover:text-neon-cyan transition-colors font-tech tracking-wider uppercase">FT_TRANSCENDENCE</a>
-          <a href="/dashboard" data-route="/dashboard" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">Game</a>
-          <a href="/profile" data-route="/profile" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">Profile</a>
-          <a href="/login" data-route="/login" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">Login</a>
-          <a href="/login" data-route="/login" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">TEST</a>
-        </nav>
       </div>
     </header><div id="room-page"><div class="min-h-screen pt-16 bg-cyber-dark relative overflow-hidden"><div class="absolute top-8 left-8 w-16 h-16 border-l-2 border-t-2 border-neon-pink opacity-50"></div><div class="absolute top-8 right-8 w-16 h-16 border-r-2 border-t-2 border-neon-cyan opacity-50"></div><div class="absolute bottom-8 left-8 w-16 h-16 border-l-2 border-b-2 border-neon-cyan opacity-50"></div><div class="absolute bottom-8 right-8 w-16 h-16 border-r-2 border-b-2 border-neon-pink opacity-50"></div>
     

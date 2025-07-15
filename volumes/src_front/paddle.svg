@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:cc="http://web.resource.org/cc/"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:svg="http://www.w3.org/2000/svg"
+    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+    xmlns:ns1="http://sozi.baierouge.fr"
+    viewBox="0 0 484 353"
+  >
+  <defs
+    >
+    <linearGradient
+        id="imagebot_21"
+        y2=".85421"
+        y1=".10694"
+        x2=".58778"
+        x1=".53499"
+      >
+      <stop
+          id="imagebot_63"
+          stop-color="#deaa87"
+          offset="0"
+      />
+      <stop
+          id="imagebot_62"
+          stop-color="#c87137"
+          offset="1"
+      />
+    </linearGradient
+    >
+    <radialGradient
+        id="imagebot_19"
+        gradientUnits="userSpaceOnUse"
+        cx="46.006"
+        cy="310.12"
+        r="345.24"
+        gradientTransform="matrix(.49835 -.065884 .063882 .48320 39.937 636.74)"
+      >
+      <stop
+          id="imagebot_56"
+          stop-color="#ff2a2a"
+          offset="0"
+      />
+      <stop
+          id="imagebot_55"
+          stop-color="#be0d00"
+          offset="1"
+      />
+    </radialGradient
+    >
+    <linearGradient
+        id="imagebot_17"
+        y2=".41164"
+        y1=".56636"
+        x2=".07173"
+        x1=".70809"
+      >
+      <stop
+          id="imagebot_61"
+          stop-color="#d89a71"
+          offset="0"
+      />
+      <stop
+          id="imagebot_60"
+          stop-color="#e9c6af"
+          offset="1"
+      />
+    </linearGradient
+    >
+    <linearGradient
+        id="imagebot_15"
+        y2=".22525"
+        y1=".77802"
+        x2=".58863"
+        x1=".40542"
+      >
+      <stop
+          id="imagebot_59"
+          stop-color="#d38d5f"
+          offset="0"
+      />
+      <stop
+          id="imagebot_58"
+          stop-color="#f4e3d7"
+          offset=".5"
+      />
+      <stop
+          id="imagebot_57"
+          stop-color="#d38d5f"
+          offset="1"
+      />
+    </linearGradient
+    >
+    <radialGradient
+        id="imagebot_13"
+        cx="596.8"
+        gradientUnits="userSpaceOnUse"
+        cy="-242.24"
+        r="63.525"
+      >
+      <stop
+          id="imagebot_65"
+          stop-color="#f9f9f9"
+          offset="0"
+      />
+      <stop
+          id="imagebot_64"
+          stop-color="#cccccc"
+          offset="1"
+      />
+    </radialGradient
+    >
+    <linearGradient
+        id="imagebot_11"
+        y2=".30205"
+        y1="1.7"
+        x2=".63628"
+        x1="1.3896"
+      >
+      <stop
+          id="imagebot_67"
+          stop-color="#b3b3b3"
+          offset="0"
+      />
+      <stop
+          id="imagebot_66"
+          stop-color="#b3b3b3"
+          stop-opacity="0"
+          offset="1"
+      />
+    </linearGradient
+    >
+    <linearGradient
+        id="imagebot_9"
+        y2=".37628"
+        y1="-.5887"
+        x2=".47307"
+        x1=".07461"
+      >
+      <stop
+          id="imagebot_69"
+          stop-color="#ffffff"
+          offset="0"
+      />
+      <stop
+          id="imagebot_68"
+          stop-color="#ffffff"
+          stop-opacity="0"
+          offset="1"
+      />
+    </linearGradient
+    >
+  </defs
+  >
+  <g
+      id="imagebot_2"
+      label="Ebene 1"
+    >
+    <title
+      >Ebene 1</title
+    >
+    <g
+        id="imagebot_75"
+      >
+      <path
+          id="imagebot_20"
+          d="m262.2 931.98s37.45-38.91 62.39-43.6c16.27-3.06 48.27 11.71 48.27 11.71l18.75-42.99s-27.81-19.09-35.2-33.5c-12.09-23.56-10.94-78.71-10.94-78.71l-83.27 187.09z"
+          fill="url(#imagebot_21)"
+          transform="matrix(.95625 0 0 .95625 6.2859 -596.15)"
+          label="Ebene 1"
+      />
+      <path
+          id="imagebot_18"
+          d="m128.85 624.87c-59.814 6.55-111.84 54.71-123.56 113.64-11.864 46.61 2.0645 97.57 33.642 133.45 29.527 35.02 71.228 57.51 113.81 72.75 36.62 12.55 82.2 14.33 112.68-13.19 13.3-12.14 16.05-31.34 24.53-46.67 19.08-43.26 38.19-86.52 57.27-129.79-2.09-40-33.76-70.24-65.32-90.85-38.43-24.05-83.27-39.06-128.72-40.65-8.12-0.14-16.3 0.24-24.33 1.31z"
+          transform="matrix(.95625 0 0 .95625 6.2859 -596.15)"
+          label="Ebene 1"
+          fill="url(#imagebot_19)"
+      />
+      <path
+          id="imagebot_16"
+          d="m331.03 885.79l15.19-22.51 12.92-32.69s-12.32 4.92-16.66 9.65c-7.42 8.09-12.48 18.94-14 29.81-0.74 5.26 2.55 15.74 2.55 15.74z"
+          fill="url(#imagebot_17)"
+          transform="matrix(.95625 0 0 .95625 6.2859 -596.15)"
+          label="Ebene 1"
+      />
+      <path
+          id="imagebot_14"
+          d="m331 885.96l137.57 63.73s14.54-19.15 19.75-29.9c5.02-10.36 10.84-32.79 10.84-32.79l-140.6-56.73-27.56 55.69z"
+          fill="url(#imagebot_15)"
+          transform="matrix(.95625 0 0 .95625 6.2859 -596.15)"
+          label="Ebene 1"
+      />
+      <path
+          id="imagebot_12"
+          d="m638.59-217.16c0 35.08-28.44 63.52-63.52 63.52-35.09 0-63.53-28.44-63.53-63.52 0-35.09 28.44-63.53 63.53-63.53 35.08 0 63.52 28.44 63.52 63.53z"
+          fill="url(#imagebot_13)"
+          transform="matrix(.69202 0 0 .69202 -152.69 449.35)"
+          label="Ebene 1"
+      />
+      <path
+          id="imagebot_10"
+          d="m290.5 914.58c1.54 4.59 2.41 9.49 2.41 14.6 0 25.38-20.61 45.96-46 45.96-17.62 0-32.91-9.91-40.63-24.46 6.07 18.28 23.3 31.46 43.63 31.46 25.39 0 46-20.58 46-45.96 0-7.81-1.97-15.16-5.41-21.6z"
+          fill="url(#imagebot_11)"
+          transform="matrix(.95625 0 0 .95625 6.2859 -596.15)"
+          label="Ebene 1"
+      />
+      <path
+          id="imagebot_8"
+          d="m209.6 957.49c-1.54-4.59-2.41-9.49-2.41-14.6 0-25.39 20.61-45.97 46-45.97 17.62 0 32.91 9.92 40.63 24.47-6.07-18.29-23.3-31.47-43.63-31.47-25.39 0-46 20.58-46 45.97 0 7.81 1.97 15.16 5.41 21.6z"
+          fill="url(#imagebot_9)"
+          transform="matrix(.95625 0 0 .95625 6.2859 -596.15)"
+          label="Ebene 1"
+      />
+      <g
+          id="imagebot_4"
+          opacity=".5"
+          transform="matrix(.088421 -.015721 .015721 .088421 256.77 227.63)"
+          fill="#000000"
+          label="Ebene 1"
+        >
+        <path
+            id="imagebot_7"
+            opacity=".3"
+            d="m-335.62 600.81l-31.44-9.38-21.68 25.75-0.8-32.8-31.18-12.66 30.95-10.9 2.4-33.57 19.93 26.07 32.67-8.09-18.64 27.01 17.79 28.57z"
+        />
+        <path
+            id="imagebot_6"
+            opacity=".3"
+            d="m-328.62 48.447l-31.44-9.378-21.68 25.75-0.79-32.805-31.19-12.655 30.95-10.897 2.4-33.571 19.93 26.07 32.67-8.0926-18.64 27.01 17.79 28.569z"
+            transform="matrix(-1 0 0 1 -544.49 552.36)"
+        />
+        <path
+            id="imagebot_5"
+            opacity=".3"
+            d="m-328.62 48.447l-31.44-9.378-21.68 25.75-0.79-32.805-31.19-12.655 30.95-10.897 2.4-33.571 19.93 26.07 32.67-8.0926-18.64 27.01 17.79 28.569z"
+            transform="matrix(-.94467 .32801 .32801 .94467 -628.37 658.98)"
+        />
+      </g
+      >
+    </g
+    >
+  </g
+  >
+  <metadata
+    >
+    <rdf:RDF
+      >
+      <cc:Work
+        >
+        <dc:format
+          >image/svg+xml</dc:format
+        >
+        <dc:type
+            rdf:resource="http://purl.org/dc/dcmitype/StillImage"
+        />
+        <cc:license
+            rdf:resource="http://creativecommons.org/licenses/publicdomain/"
+        />
+        <dc:publisher
+          >
+          <cc:Agent
+              rdf:about="http://openclipart.org/"
+            >
+            <dc:title
+              >Openclipart</dc:title
+            >
+          </cc:Agent
+          >
+        </dc:publisher
+        >
+        <dc:title
+          >Pong and Paddle ns</dc:title
+        >
+        <dc:date
+          >2012-02-07T01:24:41</dc:date
+        >
+        <dc:description
+        />
+        <dc:source
+          >https://openclipart.org/detail/167874/pong-and-paddle-ns-by-rduris</dc:source
+        >
+        <dc:creator
+          >
+          <cc:Agent
+            >
+            <dc:title
+              >rduris</dc:title
+            >
+          </cc:Agent
+          >
+        </dc:creator
+        >
+        <dc:subject
+          >
+          <rdf:Bag
+            >
+            <rdf:li
+              >ping-pong</rdf:li
+            >
+            <rdf:li
+              >table tennis</rdf:li
+            >
+            <rdf:li
+              >ball</rdf:li
+            >
+            <rdf:li
+              >paddle</rdf:li
+            >
+            <rdf:li
+              >red</rdf:li
+            >
+            <rdf:li
+              >sports</rdf:li
+            >
+          </rdf:Bag
+          >
+        </dc:subject
+        >
+      </cc:Work
+      >
+      <cc:License
+          rdf:about="http://creativecommons.org/licenses/publicdomain/"
+        >
+        <cc:permits
+            rdf:resource="http://creativecommons.org/ns#Reproduction"
+        />
+        <cc:permits
+            rdf:resource="http://creativecommons.org/ns#Distribution"
+        />
+        <cc:permits
+            rdf:resource="http://creativecommons.org/ns#DerivativeWorks"
+        />
+      </cc:License
+      >
+    </rdf:RDF
+    >
+  </metadata
+  >
+</svg
+>

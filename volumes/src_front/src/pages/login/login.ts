@@ -1,6 +1,7 @@
 import Page from '../../core/templates/page';
 import { Router } from '../../../router/Router';
 import { getAssetUrl } from '../../utils/assetUtils';
+import { showNotification } from '../../utils/notifications';
 
 class LoginPage extends Page {
   static TextObject = {
@@ -19,7 +20,7 @@ class LoginPage extends Page {
 
   async render(): Promise<HTMLElement> {
         this.container.innerHTML = '';
-        await this.setupHeaderListeners();
+        document.body.style.paddingTop = '0';
 
     const mainContent = document.createElement('div');
     mainContent.className = 'min-h-screen pt-4 bg-cyber-dark relative overflow-hidden';
@@ -94,6 +95,11 @@ class LoginPage extends Page {
     this.container.appendChild(mainContent);
 
     this.setupEventListeners();
+    this.addResizeListener();
+    setTimeout(() => {
+      initializeGoogleSignIn();
+    }, 500);
+    
     return this.container;
   }
 
@@ -144,7 +150,14 @@ class LoginPage extends Page {
         type: 'password',
         id: 'password',
         placeholder: 'Enter access code'
-      }
+      },
+      {
+        label: "TOTP (if necessary)",
+        type: 'text',
+        id: 'code_totp',
+        placeholder: 'Enter TOTP code (only if activated)'
+      },
+      
     ].forEach(({ label, type, id, placeholder }) => {
       const group = document.createElement('div');
       group.className = 'relative';
@@ -165,6 +178,10 @@ class LoginPage extends Page {
       `;
       form.appendChild(group);
     });
+
+    // Code 2FA
+    // const text2fa = document.createElement('div');
+    // text2fa.innerHTML = `<input type="text" name="code_totp">`;
 
     // Login button
     const loginButton = document.createElement('button');
@@ -208,7 +225,7 @@ class LoginPage extends Page {
 
     const googleButtonContainer = document.createElement('div');
     googleButtonContainer.id = 'buttonDivGoogle';
-    googleButtonContainer.className = 'w-full mt-4 border-2 border-transparent rounded-md min-h-[50px]';
+    googleButtonContainer.className = 'w-full mt-4 border-2 border-transparent rounded-md min-h-[50px] flex justify-center items-center';
     googleButtonContainer.style.minHeight = '50px';
     
     formContainer.appendChild(title);
@@ -230,57 +247,40 @@ class LoginPage extends Page {
         this.handleFormSubmit(e);
       });
     } else {
-      console.error('Login form not found in setupEventListeners');
+      //console.log('Login form not found in setupEventListeners');
     }
     
     const googleLoginButton = document.getElementById('google-login');
     if (googleLoginButton) {
       googleLoginButton.addEventListener('click', this.handleGoogleLogin.bind(this));
     }
-    
-    // Try to initialize Google Sign-In, with a retry mechanism
-    this.initializeGoogleSignInWithRetry();
   }
   
-  private initializeGoogleSignInWithRetry(retryCount = 0): void {
-    
-    if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-      initializeGoogleSignIn();
-    } else {
-      console.log("Google API not yet loaded, waiting...");
-      
-      // If we've tried less than 5 times, retry after a delay
-      if (retryCount < 5) {
-        setTimeout(() => {
-          this.initializeGoogleSignInWithRetry(retryCount + 1);
-        }, 1000); // Wait 1 second before retrying
-      } else {
-        // Load Google API manually as a fallback
-        this.loadGoogleApiManually();
-      }
-    }
-  }
-  
-  private loadGoogleApiManually(): void {
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      setTimeout(() => {
-        initializeGoogleSignIn();
-      }, 1000);
-    };
-    script.onerror = () => {
-    };
-    document.head.appendChild(script);
-  }
   
   private handleFormSubmit(e: Event): void {
     e.preventDefault();
     
-    const username = (document.getElementById('username') as HTMLInputElement).value;
-    const password = (document.getElementById('password') as HTMLInputElement).value;
+    const usernameEl = document.getElementById('username') as HTMLInputElement;
+    const passwordEl = document.getElementById('password') as HTMLInputElement;
+    const codeEl = document.getElementById('code_totp') as HTMLInputElement;
+    
+    // console.log('Form elements found:', {
+    //   username: !!usernameEl,
+    //   password: !!passwordEl,
+    //   code_totp: !!codeEl
+    // });
+    
+    if (!usernameEl || !passwordEl) {
+      console.error('Required form elements not found');
+      this.showFormError('Form elements not found. Please refresh the page.');
+      return;
+    }
+    
+    const username = usernameEl.value;
+    const password = passwordEl.value;
+    const code_totp = codeEl ? codeEl.value : '';
+    
+    // console.log('Form values:', { username: !!username, password: !!password, code_totp: !!code_totp });
     
     if (!username || !password) {
       this.showFormError('Username and password are required');
@@ -302,12 +302,12 @@ class LoginPage extends Page {
       fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, code_totp }),
       credentials: 'include'
     })
       .then(response => {
         console.log('Login response status:', response.status);
-        console.log('Response headers:', [...response.headers.entries()]);
+        //console.log('Response headers:', [...response.headers.entries()]);
         
         if (!response.ok) {
           return response.json().then(errorData => {
@@ -317,15 +317,29 @@ class LoginPage extends Page {
         return response.json();
       })
       .then(data => {
+        console.log('Login successful, data received:', data);
         this.showSuccess('Login successful! Redirecting...');
         
-        // Redirect after a short delay to show the success message
+        // Store authentication flag in localStorage to indicate successful login
+        if (data && data.success) {
+          localStorage.setItem('authToken', 'authenticated');
+          //console.log('Auth token set in localStorage');
+        }
+        
+        // Update global user object
+        if (data && (data.user || data.username)) {
+          (window as any).user = data.user || data;
+          console.log('User data stored:', (window as any).user);
+        }
+        
+        // Redirect immediately using window.location to ensure proper navigation
         setTimeout(() => {
-          this.router?.navigate('/dashboard');
-        }, 1500);
+          //console.log('Redirecting to dashboard...');
+          window.location.href = '/dashboard';
+        }, 1000);
       })
       .catch(error => {
-        console.error('Login error:', error);
+        //console.error('Login error:', error);
         this.showFormError(`Login failed: ${error.message}`);
       })
       .finally(() => {
@@ -396,102 +410,305 @@ class LoginPage extends Page {
       form.parentNode.insertBefore(successElement, form.nextSibling);
     }
   }
+
+  // re-render Google button on window size
+  private addResizeListener(): void {
+    let resizeTimeout: number;
+    
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(() => {
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+          renderGoogleButton(0);
+        }
+      }, 250); 
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    (this as any).resizeHandler = handleResize;
+  }
+
+  destroy(): void {
+    if ((this as any).resizeHandler) {
+      window.removeEventListener('resize', (this as any).resizeHandler);
+    }
+    super.destroy?.();
+  }
 }
 
-function handleCredentialResponse(response: any) {
-    
+function handleCredentialResponse(response: google.accounts.id.CredentialResponse) {
     if (!response || !response.credential) {
-      alert('Google authentication failed. Invalid response from Google.');
-      return;
+        showNotification("Google authentication failed. Invalid response from Google.", 'error');
+        return;
     }
     
-    console.log("ID Token received from Google: ", response.credential.substring(0, 20) + '...');
+    console.log('JWT reçu :', response.credential);
 
+    // Send the Google JWT token to the backend for verification
     fetch('/api/auth/google', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ id_token: response.credential }),
-      credentials: 'include'
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id_token: response.credential })
     })
-    .then(res => {
-      if (!res.ok) {
-        throw new Error(`Backend responded with status: ${res.status}`);
-      }
-      return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
-      
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
-      } else {
-        console.warn('No auth token received from backend');
-      }
+        if (data.success == true) {
+            if (data.needs_username) {
+                showUsernameSelectionPopup(response.credential);
+            } else {
+                // Store authentication flag for Google login
+                localStorage.setItem('authToken', 'authenticated');
+                showNotification("You have been logged in successfully with Google", 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1500);
+            }
+        }
+        else {
+            showNotification("Please try to reconnect to Google again", 'error');
+        }
+        console.log('Utilisateur connecté', data);
     })
     .catch(error => {
-      alert('Google authentication failed. Please try again or use another login method.');
+        console.error('Google authentication error:', error);
+        showNotification("Google authentication failed. Please try again.", 'error');
     });
 }
 
-// Supprimer ce bloc pour éviter la redirection automatique sur /dashboard
-// window.onload = function () {
-//   fetch('/api/me', { credentials: 'include' })
-//     .then(res => res.json())
-//     .then(data => {
-//       if (data && data.success) {
-//         // Déjà connecté, redirige vers dashboard
-//         // Prevent redirect loop: only redirect if not already on /dashboard
-//         if (window.location.pathname !== '/dashboard') {
-//           window.location.href = '/dashboard';
-//         }
-//       } else {
-//         // Google API n'est pas encore chargé, on attend...
-//         if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-//           console.log('Google API not loaded on window.onload, loading it now...');
-//           // Load the Google API script
-//           const script = document.createElement('script');
-//           script.src = 'https://accounts.google.com/gsi/client';
-//           script.async = true;
-//           script.defer = true;
-//           script.onload = function() {
-//             console.log('Google API script loaded successfully');
-//             // Wait a bit for everything to initialize
-//             setTimeout(initializeGoogleSignIn, 1000);
-//           };
-//           script.onerror = () => console.error('Failed to load Google API script');
-//           document.head.appendChild(script);
-//         } else {
-//           // Google API is already loaded, initialize with a small delay
-//           console.log('Google API already loaded on window.onload');
-//           setTimeout(initializeGoogleSignIn, 500);
-//         }
-//       }
-//     })
-//     .catch(() => {
-//       // En cas d'erreur (pas connecté), on s'assure que l'API Google est chargée
-//       if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-//         console.log('Google API not loaded, loading it now...');
-//         const script = document.createElement('script');
-//         script.src = 'https://accounts.google.com/gsi/client';
-//         script.async = true;
-//         script.defer = true;
-//         script.onload = function() {
-//           console.log('Google API script loaded successfully');
-//           setTimeout(initializeGoogleSignIn, 1000);
-//         };
-//         script.onerror = () => console.error('Failed to load Google API script');
-//         document.head.appendChild(script);
-//       } else {
-//         initializeGoogleSignIn();
-//       }
-//     });
-// };
+function showUsernameSelectionPopup(credential: string): void {
+    
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(10,10,20,0.85)';
+    modal.style.zIndex = '9999';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+
+    modal.innerHTML = `
+        <div class="bg-cyber-darker p-8 rounded-lg border-2 border-neon-pink shadow-lg flex flex-col items-center w-full max-w-sm">
+            <h3 class="text-neon-pink font-cyber text-lg mb-4 text-center">Complete Your Account</h3>
+            <p class="text-gray-400 text-sm mb-4 text-center">Welcome! Please choose a unique username and password for your account.</p>
+            <input type="text" id="username-selection-input" class="w-full bg-cyber-dark border-2 border-neon-pink/30 text-white px-3 py-2 rounded mb-3" placeholder="Enter username" autocomplete="username" maxlength="20" />
+            <input type="password" id="password-selection-input" class="w-full bg-cyber-dark border-2 border-neon-cyan/30 text-white px-3 py-2 rounded mb-3" placeholder="Enter password" autocomplete="new-password" minlength="6" />
+            <input type="password" id="confirm-password-selection-input" class="w-full bg-cyber-dark border-2 border-neon-cyan/30 text-white px-3 py-2 rounded mb-4" placeholder="Confirm password" autocomplete="new-password" />
+            <div id="username-selection-error" class="text-red-400 text-xs mb-2 hidden"></div>
+            <div class="flex w-full gap-2">
+                <button id="username-selection-confirm" class="flex-1 bg-gradient-to-r from-neon-pink to-neon-cyan text-white font-cyber px-4 py-2 rounded hover:shadow-lg hover:shadow-neon-pink/50 duration-300">Create</button>
+                <button id="username-selection-cancel" class="flex-1 bg-cyber-dark border border-neon-cyan/40 text-neon-cyan px-4 py-2 rounded hover:border-neon-cyan hover:shadow-lg hover:shadow-neon-cyan/20 duration-300">Cancel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const usernameInput = modal.querySelector('#username-selection-input') as HTMLInputElement;
+    const passwordInput = modal.querySelector('#password-selection-input') as HTMLInputElement;
+    const confirmPasswordInput = modal.querySelector('#confirm-password-selection-input') as HTMLInputElement;
+    const errorDiv = modal.querySelector('#username-selection-error') as HTMLElement;
+    const confirmBtn = modal.querySelector('#username-selection-confirm') as HTMLButtonElement;
+    const cancelBtn = modal.querySelector('#username-selection-cancel') as HTMLButtonElement;
+
+    setTimeout(() => usernameInput?.focus(), 100);
+
+    const handleCancel = () => {
+        document.body.removeChild(modal);
+        showNotification("Username selection cancelled. Redirecting to registration page...", 'error');
+        
+        setTimeout(() => {
+            window.location.href = '/register';
+        }, 2000);
+    };
+
+    cancelBtn.onclick = handleCancel;
+
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            handleCancel();
+        }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            handleCancel();
+            document.removeEventListener('keydown', handleKeyDown);
+        }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    confirmBtn.onclick = async () => {
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        errorDiv.classList.add('hidden');
+        
+        // Username validation
+        if (!username) {
+            errorDiv.textContent = 'Username is required';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        if (username.length < 3) {
+            errorDiv.textContent = 'Username must be at least 3 characters';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        if (username.length > 20) {
+            errorDiv.textContent = 'Username must be less than 20 characters';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+            errorDiv.textContent = 'Username can only contain letters, numbers, underscores, and hyphens';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        // Password validation
+        if (!password) {
+            errorDiv.textContent = 'Password is required';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        if (password.length < 6) {
+            errorDiv.textContent = 'Password must be at least 6 characters long';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            errorDiv.textContent = 'Passwords do not match';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Creating...';
+        
+        try {
+            const response = await fetch('/api/auth/google/complete', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id_token: credential,
+                    username: username,
+                    password: password
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Store authentication flag for completed Google account setup
+                localStorage.setItem('authToken', 'authenticated');
+                showNotification('Account created successfully! Welcome to Transcendence!', 'success');
+                document.body.removeChild(modal);
+                document.removeEventListener('keydown', handleKeyDown);
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1500);
+            } else {
+                let errorMessage = 'Failed to create account. Please try again.';
+                
+                switch (data.error) {
+                    case 'username_taken':
+                        errorMessage = 'This username is already taken. Please choose another.';
+                        break;
+                    case 'username_too_short':
+                        errorMessage = 'Username must be at least 3 characters long.';
+                        break;
+                    case 'username_too_long':
+                        errorMessage = 'Username must be less than 20 characters long.';
+                        break;
+                    case 'username_invalid_chars':
+                        errorMessage = 'Username can only contain letters, numbers, underscores, and hyphens.';
+                        break;
+                    case 'password_too_short':
+                        errorMessage = 'Password must be at least 6 characters long.';
+                        break;
+                    case 'user_already_exists':
+                        errorMessage = 'An account with this Google account already exists.';
+                        break;
+                    default:
+                        errorMessage = data.error || errorMessage;
+                }
+                
+                throw new Error(errorMessage);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to create account. Please try again.';
+            errorDiv.textContent = errorMessage;
+            errorDiv.classList.remove('hidden');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Create';
+        }
+    };
+
+    usernameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            passwordInput.focus();
+        }
+    });
+
+    passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            confirmPasswordInput.focus();
+        }
+    });
+
+    confirmPasswordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            confirmBtn.click();
+        }
+    });
+
+    usernameInput.addEventListener('input', () => {
+        const username = usernameInput.value.trim();
+        errorDiv.classList.add('hidden');
+        
+        if (username && !/^[a-zA-Z0-9_-]+$/.test(username)) {
+            errorDiv.textContent = 'Username can only contain letters, numbers, underscores, and hyphens';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    // Real-time password validation
+    const validatePasswords = () => {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        
+        if (confirmPassword && password !== confirmPassword) {
+            errorDiv.textContent = 'Passwords do not match';
+            errorDiv.classList.remove('hidden');
+        } else if (password && password.length < 6) {
+            errorDiv.textContent = 'Password must be at least 6 characters long';
+            errorDiv.classList.remove('hidden');  
+        } else {
+            errorDiv.classList.add('hidden');
+        }
+    };
+
+    passwordInput.addEventListener('input', validatePasswords);
+    confirmPasswordInput.addEventListener('input', validatePasswords);
+}
 
 function initializeGoogleSignIn(retryCount = 0) {
-  console.log(`Initializing Google Sign-In (attempt ${retryCount + 1})...`);
+  //console.log(`Initializing Google Sign-In (attempt ${retryCount + 1})...`);
   try {
     // Make sure Google API is loaded
     if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-      console.log('Google API not available yet, retrying...');
+      //console.log('Google API not available yet, retrying...');
       if (retryCount < 5) {
         setTimeout(() => initializeGoogleSignIn(retryCount + 1), 1000);
       } else {
@@ -501,21 +718,21 @@ function initializeGoogleSignIn(retryCount = 0) {
     }
     
     // Initialize Google Sign-In
+    const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    //console.log('Google Client ID:', CLIENT_ID); // For debugging
     google.accounts.id.initialize({
-      client_id: 'XXX',
+      client_id: CLIENT_ID,
       callback: handleCredentialResponse
     });
     
-    console.log('Google API initialized successfully');
+    //console.log('Google API initialized successfully');
 
-    // Render the Google Sign-In button
     renderGoogleButton(retryCount);
   } catch (error) {
     console.error('Error initializing Google Sign-In:', error);
     
-    // Retry if we haven't tried too many times
     if (retryCount < 5) {
-      console.log(`Retrying initialization in 1 second (attempt ${retryCount + 2})...`);
+      //console.log(`Retrying initialization in 1 second (attempt ${retryCount + 2})...`);
       setTimeout(() => initializeGoogleSignIn(retryCount + 1), 1000);
     }
   }
@@ -524,20 +741,31 @@ function initializeGoogleSignIn(retryCount = 0) {
 function renderGoogleButton(retryCount = 0) {
   const buttonDiv = document.getElementById("buttonDivGoogle");
   if (buttonDiv) {
-    console.log('Found buttonDivGoogle element, rendering button...');
+    //console.log('Found buttonDivGoogle element, rendering button...');
+    
+    const containerWidth = buttonDiv.offsetWidth;
+    const buttonWidth = Math.min(containerWidth - 20, 380); // Max 380px, with 20px margin
+    
+    buttonDiv.innerHTML = '';
+    
     google.accounts.id.renderButton(
       buttonDiv,
-      { 
-        theme: "filled_black",
-        size: "medium",
+      {
+        theme: "filled_black", 
+        size: "large",
         text: "signin_with",
-        shape: "circle",
+        shape: "rectangular",
         logo_alignment: "left",
-        width: 380
+        width: buttonWidth
       }
     );
+    
+    buttonDiv.style.display = 'flex';
+    buttonDiv.style.justifyContent = 'center';
+    buttonDiv.style.alignItems = 'center';
+    
   } else {
-    console.warn(`buttonDivGoogle element not found on attempt ${retryCount + 1}!`);
+    console.log(`buttonDivGoogle element not found on attempt ${retryCount + 1}!`);
     
     // If we haven't retried too many times, try again after a delay
     if (retryCount < 5) {

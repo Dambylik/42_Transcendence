@@ -1,10 +1,11 @@
-import PongComponent from '../../core/components/pong/pong.ts';
+// Dynamic import to reduce bundle size
+// import PongComponent from '../../core/components/pong/pong.ts';
 import BasePongPage from '../../core/templates/basePongPage';
 import localGame from '../../assets/local_game.png';
 import { Router } from '../../../router/Router';
 import { createSelectionCard, createSelectionGrid } from '../../core/components/pong/pongLayout.ts';
 import { createCanvasWrapper, createControlsDiv, createSubtitle } from '../../core/components/pong/pongFormUtils.ts';
-import { createPageHeader, createBackgroundLayers, createAnimatedContainer, createLevelIndicator} from '../../core/components/pong/pongUtils.ts';
+import { createPageHeader, createBackgroundLayers, createAnimatedContainer, createLevelIndicator, createGameRules, createEndGameScreen} from '../../core/components/pong/pongUtils.ts';
 
 
 class AiPongPage extends BasePongPage {
@@ -33,12 +34,12 @@ class AiPongPage extends BasePongPage {
             desc: 'A BALANCED CHALLENGE FOR INTERMEDIATE PLAYERS. THIS AI REACTS FASTER AND MAKES FEWER MISTAKES. TEST YOUR REFLEXES AND STRATEGY IN THIS COMPETITIVE MODE THAT REWARDS SKILL AND FOCUS.'
         },
         { 
-            id: 'hard', 
+            id: 'strong', 
             label: 'EXPERT AI', 
             desc: 'FOR SEASONED PLAYERS ONLY! THIS FORMIDABLE OPPONENT FEATURES LIGHTNING-FAST REACTIONS AND PRECISION TARGETING. OUTSMART THE ALGORITHM WITH UNPREDICTABLE PLAYS AND PERFECT TIMING TO CLAIM VICTORY.'
         },
         { 
-            id: 'impossible', 
+            id: 'hard', 
             label: 'NIGHTMARE AI', 
             desc: 'THE ULTIMATE TEST OF SKILL AND ENDURANCE. FACE THE PERFECT MACHINE WITH SUPERHUMAN REFLEXES AND FLAWLESS PREDICTION. CAN YOU FIND THE ONE WEAKNESS IN THIS SEEMINGLY UNBEATABLE OPPONENT? ONLY LEGENDS HAVE SUCCEEDED.'
         }
@@ -88,7 +89,7 @@ class AiPongPage extends BasePongPage {
         const subtitle = createSubtitle('CHOOSE YOUR OPPONENT');
         
         const cards = this.aiChoices.map(ai => 
-            createSelectionCard(ai.label, ai.desc, ai.id, () => this.startGame(ai.id))
+            createSelectionCard(ai.label, ai.desc, ai.id, async () => await this.startGame(ai.id))
         );
         
         const cardGrid = createSelectionGrid(cards);
@@ -99,34 +100,43 @@ class AiPongPage extends BasePongPage {
         aiChoiceContainer.appendChild(aiChoiceDiv);
     }
 
-    private startGame(aiType: string)
+    private async startGame(aiType: string)
     {
         this.aiType = aiType;
         const aiChoiceContainer = this.container.querySelector('#ai-choice-container');
         if (aiChoiceContainer)
         {
             aiChoiceContainer.classList.add('animate-fade-out');
-            setTimeout(() => {
+            setTimeout(async () => {
                 if (aiChoiceContainer) aiChoiceContainer.innerHTML = '';
-                this.initializeGame(aiType);
+                await this.initializeGame(aiType);
             }, 300);
         } else
         {
-            this.initializeGame(aiType);
+            await this.initializeGame(aiType);
         }
     }
   
-    private initializeGame(aiType: string) {
+    private async initializeGame(aiType: string) {
         const pongContainer = this.container.querySelector('#pong-container');
         if (pongContainer) pongContainer.innerHTML = '';
         
         const levelIndicator = createLevelIndicator(aiType);
         if (pongContainer) pongContainer.appendChild(levelIndicator);
         
+        const gameRules = createGameRules('ai');
+        if (pongContainer) pongContainer.appendChild(gameRules);
+        
         const player1 = 'YOU';
         const player2 = aiType.toUpperCase() + ' AI';
 
-        this.pongComponent = new PongComponent(player1, player2, { aiType });
+        // Dynamic import to reduce bundle size
+        const { default: PongComponent } = await import('../../core/components/pong/pong');
+        
+        this.pongComponent = new PongComponent(player1, player2, { 
+            aiType,
+            onGameEnd: (winner: string) => this.handleGameEnd(winner)
+        });
         
         const { wrapper: canvasWrapper, inner: canvasInner } = createCanvasWrapper();
         
@@ -143,7 +153,7 @@ class AiPongPage extends BasePongPage {
                 id: 'restart-btn',
                 text: 'RESTART',
                 type: 'primary' as const,
-                onClick: () => this.initializeGame(aiType)
+                onClick: async () => await this.initializeGame(aiType)
             },
             {
                 id: 'change-level-btn',
@@ -249,13 +259,13 @@ class AiPongPage extends BasePongPage {
         aimError = 30;
         hesitationChance = 0.18;
         break;
-      case 'hard':
-        baseReactionDelay = 700;
-        missChance = 0.05;
-        aimError = 10;
-        hesitationChance = 0.10;
+      case 'strong':
+        baseReactionDelay = 400; //400 -> 700
+        missChance = 0.02; // 0.02 -> 0.05
+        aimError = 5; // 5 -> 10
+        hesitationChance = 0.03; // 0.03 -> 0.10
         break;
-      case 'impossible':
+      case 'hard':
         baseReactionDelay = 40; // Très rapide, mais pas instantané
         missChance = 0;
         aimError = 0;
@@ -273,8 +283,8 @@ class AiPongPage extends BasePongPage {
     const aiDecision = () => {
       if (!pong || !pong.ball || !pong.rightPaddle) return;
 
-      // Impossible: comportement humain mais parfait (aucune erreur, aucune hésitation)
-      if (aiType === 'impossible') {
+      // hard: comportement humain mais parfait (aucune erreur, aucune hésitation)
+      if (aiType === 'hard') {
         // Prédiction parfaite de la trajectoire
         const paddleX = pong.canvas.width - pong.ballRadius - 1;
         let predictedY = this.predictBallY(
@@ -318,7 +328,7 @@ class AiPongPage extends BasePongPage {
         aiTargetY = pong.canvas.height / 2 - pong.paddleHeight / 2;
       } else {
         const paddleX = pong.canvas.width - pong.ballRadius - 1;
-        let predictedY = aiType === 'impossible'
+        let predictedY = aiType === 'hard'
           ? pong.ballY
           : pong.ballY;
 
@@ -360,8 +370,8 @@ class AiPongPage extends BasePongPage {
     // Intervalle variable pour simuler un temps de réaction humain
     const aiLoop = () => {
       aiDecision();
-      // Impossible: délai très court, sinon comportement normal
-      const nextDelay = aiType === 'impossible'
+      // hard: délai très court, sinon comportement normal
+      const nextDelay = aiType === 'hard'
         ? baseReactionDelay
         : baseReactionDelay + Math.floor((Math.random() - 0.5) * baseReactionDelay * 0.4);
       this.aiIntervalId = window.setTimeout(aiLoop, Math.max(8, nextDelay));
@@ -378,6 +388,30 @@ class AiPongPage extends BasePongPage {
     // Call parent destroy method for common cleanup
     super.destroy();
   }
+
+  private handleGameEnd(winner: string): void {
+        if (this.aiIntervalId !== null) {
+            clearInterval(this.aiIntervalId);
+            this.aiIntervalId = null;
+        }
+        
+        const pongContainer = this.container.querySelector('#pong-container');
+        if (!pongContainer) return;
+
+        const endGameScreen = createEndGameScreen(
+            winner,
+            async () => {
+                pongContainer.removeChild(endGameScreen);
+                await this.initializeGame(this.aiType);
+            },
+            () => {
+                pongContainer.removeChild(endGameScreen);
+                this.router?.navigate('/dashboard');
+            }
+        );
+        
+        pongContainer.appendChild(endGameScreen);
+    }
 }
 
 export default AiPongPage;

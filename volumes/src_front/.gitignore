@@ -1,10 +1,5 @@
 # # OS files
 .DS_Store
 Thumbs.db
-<<<<<<< HEAD
-dist/
-=======
 
 dist/
-
->>>>>>> c8cfedbbb4b2fe84e8448eb2fad8be59de55779a

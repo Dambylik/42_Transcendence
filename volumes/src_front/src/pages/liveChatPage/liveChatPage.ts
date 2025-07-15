@@ -1,8 +1,8 @@
 import Page from '../../core/templates/page';
 
 class LiveChatPage extends Page {
-  private ws?: WebSocket;
-  private privateWs?: WebSocket;
+  private unsubscribeGeneral?: () => void;
+  private unsubscribePrivate?: () => void;
   private friends: { id: number; username: string; avatar_url: string }[] = [];
 
   async render(): Promise<HTMLElement> {
@@ -233,12 +233,15 @@ class LiveChatPage extends Page {
 
     const sendMessage = () => {
       const content = input.value.trim();
-      if (!content || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-      this.ws.send(content);
-      input.value = '';
-
-      // Auto-scroll to the bottom after sending a message
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      if (!content) return;
+      
+      if (this.wsManager.sendChatMessage(content)) {
+        input.value = '';
+        // Auto-scroll to the bottom after sending a message
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } else {
+        console.warn('Failed to send message - WebSocket not connected');
+      }
     };
 
     sendButton.addEventListener('click', sendMessage);
@@ -267,47 +270,15 @@ class LiveChatPage extends Page {
       console.error('Failed to load chat history:', err);
     }
 
-    let wsReconnectDelay = 1000; // ms, backoff
-    let wsReconnectTries = 0;
-
-    // --- Nouvelle fonction de connexion WS avec reconnexion automatique ---
-    const connectGeneralWS = () => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
-      this.ws = new WebSocket('wss://localhost:4430/api/ws/chat');
-      this.ws.addEventListener('message', (e) => {
-        const data = JSON.parse(e.data);
-        if (Array.isArray(data)) {
-          data.forEach(addMessageElement);
-        } else {
-          addMessageElement(data);
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-      });
-      this.ws.addEventListener('error', (e) => {
-        console.error('WebSocket error:', e);
-      });
-      this.ws.addEventListener('close', () => {
-        console.warn('WebSocket connection closed');
-        // Reconnexion automatique avec backoff
-        wsReconnectTries++;
-        setTimeout(() => {
-          wsReconnectDelay = Math.min(30000, wsReconnectDelay * 2); // max 30s
-          connectGeneralWS();
-        }, wsReconnectDelay);
-      });
-      this.ws.addEventListener('open', () => {
-        wsReconnectDelay = 1000;
-        wsReconnectTries = 0;
-        // --- Keepalive ping ---
-        if ((this as any)._chatPingInterval) clearInterval((this as any)._chatPingInterval);
-        (this as any)._chatPingInterval = setInterval(() => {
-          if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send("ping");
-        }, 30000);
-      });
-    };
-
-    // Connecter le WebSocket (avec reconnexion auto)
-    connectGeneralWS();
+    // Connecter au chat général via WebSocketManager
+    this.unsubscribeGeneral = this.wsManager.subscribeToChatGeneral((data) => {
+      if (Array.isArray(data)) {
+        data.forEach(addMessageElement);
+      } else {
+        addMessageElement(data);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    });
 
     // --- PRIVATE CHAT LOGIC ---
     // Ajout : Set pour éviter les doublons dans le chat privé
@@ -354,11 +325,13 @@ class LiveChatPage extends Page {
       privateMessagesContainer.innerHTML = '';
       // Réinitialise le Set pour ce nouvel ami
       displayedPrivateMessages.clear();
-      // Ferme l'ancien WS si besoin
-      if (this.privateWs) {
-        this.privateWs.close();
-        this.privateWs = undefined;
+      
+      // Désabonne de l'ancien chat privé si nécessaire
+      if (this.unsubscribePrivate) {
+        this.unsubscribePrivate();
+        this.unsubscribePrivate = undefined;
       }
+      
       // Charge l'historique
       try {
         const res = await fetch(`/api/private_chat/history/${friendId}`, { credentials: 'include' });
@@ -369,40 +342,29 @@ class LiveChatPage extends Page {
           privateMessagesContainer.scrollTop = privateMessagesContainer.scrollHeight;
         }, 0);
       } catch {}
-      // Connecte le WS
-      if ('WebSocket' in window) {
-        this.privateWs = new WebSocket(`wss://localhost:4430/api/ws/private_chat/${friendId}`);
-        this.privateWs.addEventListener('open', () => {
-          // --- Keepalive ping for private chat ---
-          if ((this as any)._privatePingInterval) clearInterval((this as any)._privatePingInterval);
-          (this as any)._privatePingInterval = setInterval(() => {
-            if (this.privateWs && this.privateWs.readyState === WebSocket.OPEN) this.privateWs.send("ping");
-          }, 30000);
-        });
-        this.privateWs.addEventListener('message', (e) => {
-          const data = JSON.parse(e.data);
-          // Gestion du cas où l'utilisateur n'est pas ami
-          if (data && data.success === false && data.error === "not_friends") {
-            privateMessagesContainer.innerHTML = `
-              <div class="text-center text-red-400 font-cyber py-8">
-                <div class="text-4xl mb-4">🚫</div>
-                <h3 class="text-lg mb-2">You can only chat privately with your friends.</h3>
-                <p class="text-gray-400">Add this user as a friend to start a private conversation.</p>
-              </div>
-            `;
-            privateInput.disabled = true;
-            privateSendButton.disabled = true;
-            return;
-          }
-          addPrivateMessageElement(data);
-          privateMessagesContainer.scrollTop = privateMessagesContainer.scrollHeight;
-        });
-        this.privateWs.addEventListener('close', () => {});
-        this.privateWs.addEventListener('error', () => {});
-        // Réactive l'input si jamais il était désactivé
-        privateInput.disabled = false;
-        privateSendButton.disabled = false;
-      }
+      
+      // Connecte le WS via WebSocketManager
+      this.unsubscribePrivate = this.wsManager.subscribeToPrivateChat(friendId, (data) => {
+        // Gestion du cas où l'utilisateur n'est pas ami
+        if (data && data.success === false && data.error === "not_friends") {
+          privateMessagesContainer.innerHTML = `
+            <div class="text-center text-red-400 font-cyber py-8">
+              <div class="text-4xl mb-4">🚫</div>
+              <h3 class="text-lg mb-2">You can only chat privately with your friends.</h3>
+              <p class="text-gray-400">Add this user as a friend to start a private conversation.</p>
+            </div>
+          `;
+          privateInput.disabled = true;
+          privateSendButton.disabled = true;
+          return;
+        }
+        addPrivateMessageElement(data);
+        privateMessagesContainer.scrollTop = privateMessagesContainer.scrollHeight;
+      });
+      
+      // Réactive l'input
+      privateInput.disabled = false;
+      privateSendButton.disabled = false;
     };
 
     // Affiche un message privé
@@ -469,10 +431,14 @@ class LiveChatPage extends Page {
     const sendPrivateMessage = () => {
       const content = privateInput.value.trim();
       // Ajout: vérifie qu'un ami est sélectionné
-      if (!content || !this.privateWs || this.privateWs.readyState !== WebSocket.OPEN || selectedFriendId === null) return;
-      this.privateWs.send(content);
-      privateInput.value = '';
-      privateMessagesContainer.scrollTop = privateMessagesContainer.scrollHeight;
+      if (!content || selectedFriendId === null) return;
+      
+      if (this.wsManager.sendPrivateChatMessage(selectedFriendId, content)) {
+        privateInput.value = '';
+        privateMessagesContainer.scrollTop = privateMessagesContainer.scrollHeight;
+      } else {
+        console.warn('Failed to send private message - WebSocket not connected');
+      }
     };
 
     privateSendButton.addEventListener('click', sendPrivateMessage);
@@ -508,6 +474,22 @@ class LiveChatPage extends Page {
 
     await super.setupSidebarListeners();
     return this.container;
+  }
+
+  destroy(): void {
+    // Nettoyer les connexions WebSocket
+    if (this.unsubscribeGeneral) {
+      this.unsubscribeGeneral();
+      this.unsubscribeGeneral = undefined;
+    }
+    
+    if (this.unsubscribePrivate) {
+      this.unsubscribePrivate();
+      this.unsubscribePrivate = undefined;
+    }
+    
+    // Appeler la méthode parent
+    super.destroy();
   }
 }
 

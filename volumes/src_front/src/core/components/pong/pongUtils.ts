@@ -187,3 +187,106 @@ export function createLevelIndicator(aiType: string): HTMLElement {
     
     return levelDiv;
 }
+
+export function createGameRules(gameType: string): HTMLElement {
+    const rulesContainer = document.createElement('div');
+    rulesContainer.className = 'bg-cyber-dark/50 border border-neon-cyan/30 p-6 mb-6 cyber-border';
+    
+    const title = document.createElement('h3');
+    title.className = 'text-neon-pink font-cyber text-xl mb-4 text-center';
+    title.textContent = 'GAME RULES';
+    
+    const rulesList = document.createElement('div');
+    rulesList.className = 'space-y-3 text-gray-300 font-tech text-sm';
+    
+    let rules: string[] = [];
+    
+    if (gameType === 'connect4') {
+        rules = [
+            '🎯 OBJECTIVE: Be the first to connect 4 discs in a row',
+            '🔄 HOW TO PLAY: Click on columns to drop your discs',
+            '📐 WIN CONDITIONS: 4 in a row horizontally, vertically, or diagonally',
+            '⚡ STRATEGY: Block opponent while building your own connections'
+        ];
+    } else {
+        rules = [
+            '🎯 OBJECTIVE: First player to score 5 points wins',
+            '⚡ BALL SPEED: Ball speed increases with each paddle hit',
+        ];
+    }
+
+   
+    rules.forEach(rule => {
+        const ruleDiv = document.createElement('div');
+        ruleDiv.className = 'flex items-center gap-3 p-2 bg-cyber-dark/30 rounded border border-neon-cyan/20';
+        ruleDiv.textContent = rule;
+        rulesList.appendChild(ruleDiv);
+    });
+    
+    rulesContainer.appendChild(title);
+    rulesContainer.appendChild(rulesList);
+    
+    return rulesContainer;
+}
+
+export function createEndGameScreen(winner: string, onRestart: () => void, onMainMenu: () => void): HTMLElement {
+    const overlay = document.createElement('div');
+    overlay.className = 'absolute inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in';
+    
+    const endGameContainer = document.createElement('div');
+    endGameContainer.className = 'bg-cyber-dark border-2 border-neon-pink p-8 text-center cyber-border animate-scale-in max-w-md mx-4';
+    
+    const winnerTitle = document.createElement('h2');
+    winnerTitle.className = 'text-neon-pink font-cyber text-4xl mb-2 animate-glow-pulse';
+    winnerTitle.textContent = 'GAME OVER';
+    
+    const winnerText = document.createElement('p');
+    winnerText.className = 'text-neon-cyan font-cyber text-2xl mb-6';
+    winnerText.textContent = `${winner} WINS!`;
+    
+    const scoreText = document.createElement('p');
+    scoreText.className = 'text-gray-300 font-tech text-lg mb-8';
+    scoreText.textContent = 'Final Score: 5 Points';
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'flex flex-col gap-4';
+    
+    const restartButton = createCyberButton({
+        text: 'PLAY AGAIN',
+        type: 'gradient',
+        fullWidth: true,
+        onClick: onRestart
+    });
+    
+    const mainMenuButton = createCyberButton({
+        text: 'MAIN MENU',
+        type: 'secondary',
+        fullWidth: true,
+        onClick: onMainMenu
+    });
+    
+    buttonContainer.appendChild(restartButton);
+    buttonContainer.appendChild(mainMenuButton);
+    
+    endGameContainer.appendChild(winnerTitle);
+    endGameContainer.appendChild(winnerText);
+    endGameContainer.appendChild(scoreText);
+    endGameContainer.appendChild(buttonContainer);
+    
+    overlay.appendChild(endGameContainer);
+    
+    return overlay;
+}
+
+export function createCountdownOverlay(count: number): HTMLElement {
+    const overlay = document.createElement('div');
+    overlay.className = 'absolute inset-0 bg-black/50 flex items-center justify-center z-40';
+    
+    const countElement = document.createElement('div');
+    countElement.className = 'text-neon-pink font-cyber text-8xl animate-pulse';
+    countElement.textContent = count > 0 ? count.toString() : 'GO!';
+    
+    overlay.appendChild(countElement);
+    
+    return overlay;
+}

@@ -77,6 +77,19 @@ db.all = util.promisify(db.all.bind(db));
     }
 })();
 
+// Add sub_google column to users table
+(async () => {
+    try {
+        const columns = await db.all(`PRAGMA table_info(users)`);
+        const hasSubGoogle = columns.some(col => col.name === 'sub_google');
+        if (!hasSubGoogle) {
+            await db.run(`ALTER TABLE users ADD COLUMN sub_google VARCHAR(255) DEFAULT NULL`);
+        }
+    } catch (err) {
+        console.error("Error checking or adding 'sub_google' column:", err);
+    }
+})();
+
 
 // Retourne le contenu du JWT a mettre dans le JWT final pour un utilisateur ayant l'id user_id
 async function getJWTContent(user_id)
@@ -150,94 +163,79 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
         });
 
         // Route inscription
+        // ...existing code...
         fastify.post('/api/register', async (request, reply) => {
-                const data = request.body;
-                const { username, password } = data;
+        const data = request.body;
+        const { username, password } = data;
 
-                if (!username || !password) {
-                    return reply.status(400).send({ success: false, error: 'username_or_password_empty' });
-                }
+        if (!username || !password) {
+            return reply.status(400).send({ success: false, error: 'username_or_password_empty' });
+        }
 
-                try {
-                    const user_exists = await db.get("SELECT * FROM users WHERE username = ?", [username]);
-                    if (user_exists) {
-                        return reply.status(409).send({ success: false, error: 'username_already_exist' });
-                    }
-                } catch (err) {
-                    return reply.status(500).send({ success: false, error: 'db_access' });
-                }
+        try {
+            const user_exists = await db.get("SELECT * FROM users WHERE username = ?", [username]);
+            if (user_exists) {
+            return reply.status(409).send({ success: false, error: 'username_already_exist' });
+            }
+        } catch (err) {
+            console.error("Erreur DB (check user exists):", err);
+            return reply.status(500).send({ success: false, error: 'db_access' });
+        }
 
-                const hashed_password = await bcrypt.hash(password, 10);
-                try {
-                    await db.run(
-                        "INSERT INTO users (username, password, created_at, last_online, level) VALUES (?, ?, datetime('now'), datetime('now'), 0)",
-                        [username, hashed_password]
-                    );
-                } catch (err) {
-                    return reply.status(500).send({ success: false, error: 'db_access' });
-                }
+        const hashed_password = await bcrypt.hash(password, 10);
+        let user_added_id;
+        try {
+            await db.run(
+            "INSERT INTO users (username, password, created_at, last_online, level) VALUES (?, ?, datetime('now'), datetime('now'), 0)",
+            [username, hashed_password]
+            );
+            const user_added = await db.get("SELECT * FROM users WHERE username = ?", [username]);
+            user_added_id = user_added.id;
+        } catch (err) {
+            console.error("Erreur DB (insert user):", err);
+            return reply.status(500).send({ success: false, error: 'db_access' });
+        }
 
-                // Obtient le nouvel user ajouté a la base de données
-                let user_added_id;
-                try {
-                        const user_added = await db.get("SELECT * FROM users WHERE username = ?", [username])
-                        user_added_id = user_added.id;
-                } catch (err)
-                {
-                        return reply.status(500).send({success: false, error : 'db_access'});                          
-                }
+        // Génère un nouveau JWT
+        let token_jwt, sessionId;
+        try {
+            const jwt_content = await getJWTContent(user_added_id);
+            token_jwt = fastify.jwt.sign(jwt_content);
+            sessionId = require('crypto').randomUUID();
+        } catch (err) {
+            console.error("Erreur génération JWT:", err);
+            return reply.status(500).send({ success: false, error: 'db_access' });
+        }
 
-                // Génère un nouveau JWT
-                try {
-                        const jwt_content = await getJWTContent(user_added_id);
-                        const token_jwt = fastify.jwt.sign(jwt_content);
+        // Ajout login_history (ne bloque pas l'inscription si erreur)
+        try {
+            const ua = request.headers['user-agent'] || '';
+            const ip = request.headers['x-forwarded-for'] || request.ip || '';
+            const { browser, os } = parseUserAgent(ua);
+            const tokenHash = require('crypto').createHash('sha256').update(token_jwt).digest('hex');
+            await db.run(
+            "INSERT INTO login_history (user_id, browser, os, ip, user_agent, session_id, token_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [user_added_id, browser, os, ip, ua, sessionId, tokenHash]
+            );
+            broadcastRecentLogin(username, new Date().toISOString());
+        } catch (err) {
+            console.error('Error saving login_history after register:', err);
+            // Ne retourne pas d'erreur ici !
+        }
 
-                        // // Ajout login_history (comme dans login)
-                        // try {
-                        //     const ua = request.headers['user-agent'] || '';
-                        //     const ip = request.headers['x-forwarded-for'] || request.ip || '';
-                        //     const { browser, os } = parseUserAgent(ua);
-                        //     const sessionId = require('crypto').randomUUID();
-                        //     const tokenHash = require('crypto').createHash('sha256').update(token_jwt).digest('hex');
-                        //     await db.run(
-                        //         "INSERT INTO login_history (user_id, browser, os, ip, user_agent, session_id, token_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        //         [user_added_id, browser, os, ip, ua, sessionId, tokenHash]
-                        //     );
-                        //     // Broadcast en temps réel
-                        //     broadcastRecentLogin(username, new Date().toISOString());
-                        // } catch (err) {
-                        //     console.error('Error saving login_history after register:', err);
-                        // }
-
-                        // // return ({success : true, token_jwt});
-                        // return reply.setCookie('token', token_jwt, {
-                        //         httpOnly: true,
-                        //         secure : true,
-                        //         sameSite : 'none',
-                        //         path : '/'
-                        // }).setCookie('session_id', sessionId, {
-                        //         httpOnly: false,
-                        //         secure : true,
-                        //         sameSite : 'none',
-                        //         path : '/'
-                        // }).send({success: true});
-
-
-
-                        // return ({success : true, token_jwt});
-                        return reply.setCookie('token', token_jwt, {
-                                httpOnly: true,
-                                secure : true,
-                                sameSite : 'none',
-                                path : '/'
-                        }).send({success: true});
-                } catch (err)
-                {
-                        return ({success : false, error : "db_access"});
-                }
-
+        // Réponse finale
+        return reply.setCookie('token', token_jwt, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            path: '/'
+        }).setCookie('session_id', sessionId, {
+            httpOnly: false,
+            secure: true,
+            sameSite: 'none',
+            path: '/'
+        }).send({ success: true });
         });
-
 
 
         // Route connexion
@@ -358,6 +356,32 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                 }
         });
 
+        // Desactive le 2FA
+        fastify.get('/api/2fa/disable', {preValidation: [fastify.authenticate]}, async (request, reply) => {
+                try {
+                        // Met a jour le secret key dans le base de données
+                        const sql_request = "UPDATE users SET secret_totp = NULL WHERE id = ?";
+                        await db.run(sql_request, [request.user.id]);
+                        return ({success:true});
+                } catch (err)
+                {
+                        return ({success:false, error:"db_access"});
+                }
+        });
+
+        // // Permet d'activer le 2FA sur le compte et renvoie le qr code (ainsi que la clé secrete). Nécessite d'être connecté
+        // fastify.get('/api/2fa/enabled', {preValidation: [fastify.authenticate]}, async (request, reply) => {
+        //         try {
+
+        //                 user = await db.get("SELECT * FROM users WHERE id = ?", [username]);
+
+        //         } catch (err)
+        //         {
+        //                 return ({success:false, error:"db_access"});
+        //         }
+        // });
+
+
 
         fastify.get('/api/set_afk', {preValidation: [fastify.authenticate]}, async (request, reply) => {
                 // Update last_online for authenticated user
@@ -397,48 +421,9 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                                 }
                                 if (!user)
                                 {
-
                                         // Premiere connexion avec Google SignIn
-
-                                        // Génère un pseudo aléatoire
-                                        const number = Math.floor(Math.random() * 10000000);
-                                        const pseudo_new = `Player${number}`;
-
-                                        // Insert un nouvel utilisateur dans la BDD avec le pseudo aléatoire
-                                        try {
-                                                await db.run("INSERT INTO users (username, sub_google) VALUES (?, ?)", [pseudo_new, payload.sub]);
-                                        } catch (err)
-                                        {
-                                                return reply.status(500).send({success: false, error : 'db_access'});
-                                        }
-
-                                        // Je récupère son ID
-                                        let real_user;
-                                        try {
-                                                real_user = await db.get("SELECT * FROM users WHERE sub_google = ?", [payload.sub]);
-                                        } catch (err){
-                                                return reply.status(500).send({success: false, error : 'db_access'});                          
-                                        }
-
-                                        // Génère un nouveau JWT
-                                        try {
-                                                const jwt_content = await getJWTContent(real_user.id);
-                                                const token_jwt = fastify.jwt.sign(jwt_content);
-                                                // return ({success : true, first_connection:true ,token_jwt});
-
-
-                                                ///// A TESTER !!!!!!
-                                                return reply.setCookie('token', token_jwt, {
-                                                        httpOnly: true,
-                                                        secure : true,
-                                                        sameSite : 'none',
-                                                        path : '/'
-                                                }).send({success: true});
-
-                                        } catch (err)
-                                        {
-                                                return ({success : false, error : "db_access"});
-                                        }
+                                        // Do not create user yet, let frontend handle username selection
+                                        return reply.send({success: true, needs_username: true});
                                 }
                                 else
                                 {
@@ -471,13 +456,159 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                 }
         } );
 
+        // Route API pour compléter l'inscription Google avec un username choisi
+        fastify.post('/api/auth/google/complete', async (request, reply) => {
+                const { id_token, username, password } = request.body;
 
-        // Test du cookie : renvoie mon pseudo
+                try {
+                        // Verify the Google token again
+                        const ticket = await client.verifyIdToken({
+                                idToken: id_token,
+                                audience: CLIENT_ID
+                        });
+
+                        const payload = ticket.getPayload();
+
+                        if (!payload) {
+                                return reply.status(401).send({success: false, error: "invalid_token"});
+                        }
+
+                        // Validate username
+                        if (!username || typeof username !== 'string') {
+                                return reply.status(400).send({success: false, error: "username_required"});
+                        }
+
+                        // Validate password
+                        if (!password || typeof password !== 'string') {
+                                return reply.status(400).send({success: false, error: "password_required"});
+                        }
+
+                        if (password.length < 6) {
+                                return reply.status(400).send({success: false, error: "password_too_short"});
+                        }
+
+                        const trimmedUsername = username.trim();
+                        
+                        if (trimmedUsername.length < 3) {
+                                return reply.status(400).send({success: false, error: "username_too_short"});
+                        }
+                        
+                        if (trimmedUsername.length > 20) {
+                                return reply.status(400).send({success: false, error: "username_too_long"});
+                        }
+                        
+                        if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+                                return reply.status(400).send({success: false, error: "username_invalid_chars"});
+                        }
+
+                        // Check if user already exists with this Google account
+                        let existingUser;
+                        try {
+                                existingUser = await db.get("SELECT * FROM users WHERE sub_google = ?", [payload.sub]);
+                                if (existingUser) {
+                                        return reply.status(400).send({success: false, error: "user_already_exists"});
+                                }
+                        } catch (err) {
+                                return reply.status(500).send({success: false, error: 'db_access'});
+                        }
+
+                        // Check if username is already taken
+                        let usernameCheck;
+                        try {
+                                usernameCheck = await db.get("SELECT id FROM users WHERE username = ?", [trimmedUsername]);
+                                if (usernameCheck) {
+                                        return reply.status(400).send({success: false, error: "username_taken"});
+                                }
+                        } catch (err) {
+                                return reply.status(500).send({success: false, error: 'db_access'});
+                        }
+
+                        // Create new user with chosen username and hashed password
+                        const hashed_password = await bcrypt.hash(password, 10);
+                        try {
+                                await db.run("INSERT INTO users (username, password, sub_google) VALUES (?, ?, ?)", [trimmedUsername, hashed_password, payload.sub]);
+                        } catch (err) {
+                                console.error("Error creating user:", err);
+                                return reply.status(500).send({success: false, error: 'db_access'});
+                        }
+
+                        // Get the created user
+                        let newUser;
+                        try {
+                                newUser = await db.get("SELECT * FROM users WHERE sub_google = ?", [payload.sub]);
+                        } catch (err) {
+                                return reply.status(500).send({success: false, error: 'db_access'});
+                        }
+
+                        // Generate JWT and set cookie
+                        try {
+                                const jwt_content = await getJWTContent(newUser.id);
+                                const token_jwt = fastify.jwt.sign(jwt_content);
+                                // Génère un ID de session unique
+                                const sessionId = require('crypto').randomUUID();
+
+                                // Ajout dans login_history avec session_id et token_hash
+                                try {
+                                        const userAgent = request.headers['user-agent'] || 'Unknown';
+                                        const { browser, os } = parseUserAgent(userAgent);
+                                        const tokenHash = require('crypto').createHash('sha256').update(token_jwt).digest('hex');
+                                        
+                                        await db.run(`
+                                                INSERT INTO login_history 
+                                                (user_id, session_id, token_hash, browser, os, login_time, is_active) 
+                                                VALUES (?, ?, ?, ?, ?, datetime('now'), 1)
+                                        `, [newUser.id, sessionId, tokenHash, browser, os]);
+                                        
+                                        // Broadcast recent login
+                                        broadcastRecentLogin(newUser.username, new Date().toISOString());
+                                } catch (err) {
+                                        console.error('Error saving login_history:', err);
+                                }
+
+                                return reply.setCookie('token', token_jwt, {
+                                        httpOnly: true,
+                                        secure: true,
+                                        sameSite: 'none',
+                                        path: '/'
+                                }).setCookie('session_id', sessionId, {
+                                        httpOnly: false,
+                                        secure: true,
+                                        sameSite: 'none',
+                                        path: '/'
+                                }).send({success: true});
+
+                        } catch (err) {
+                                console.error("Error generating JWT:", err);
+                                return reply.status(500).send({success: false, error: "db_access"});
+                        }
+
+                } catch (err) {
+                        console.error("Google complete signup error:", err);
+                        return reply.status(500).send({success: false, error: 'unknown_error'});
+                }
+        });
+
+
+        // Test du cookie : renvoie mon pseudo et avatar
         fastify.get('/api/test_my_profile', {preValidation: [fastify.authenticate]}, async (request, reply) => {
                 // Update last_online for authenticated user
                 await fastify.updateLastOnline(request.user.id);
 
-                return ({username:request.user.username});
+                // Récupère les données utilisateur depuis la base
+                let user;
+                try {
+                        user = await db.get("SELECT avatar_url, level, xp FROM users WHERE id = ?", [request.user.id]);
+                } catch (err) {
+                        return reply.status(500).send({success: false, error: 'db_access'});
+                }
+
+                return ({
+                        id: request.user.id,
+                        username: request.user.username,
+                        avatar_url: user?.avatar_url || 'default.png',
+                        level: user?.level || 0,
+                        xp: user?.xp || 0
+                });
         });
 
 
@@ -592,7 +723,7 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                                 try {
                                         await pipeline(part.file, fs.createWriteStream(dir_and_filename));
                                         await db.run("UPDATE users SET avatar_url = ? WHERE id = ?", [new_name, userId]);
-                                        return ({success:true, avatar_url: "uploads/" + new_name});
+                                        return ({success:true, avatar_url: "/uploads/" + new_name});
                                 } catch (err) 
                                 {
                                         return reply.status(500).send({success:false, error:"db_access"});
@@ -1005,6 +1136,27 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                 };
         });
 
+        // Vérifie si le 2FA est déja activé sur mon compte
+        fastify.get('/api/2fa/activated', {preValidation: [fastify.authenticate]}, async (request, reply) => {
+                let user;
+                try {
+                        user = await db.get("SELECT * FROM users WHERE id = ?", [request.user.id]);
+                        if (!user) {
+                                return { success: false, error: "user_not_found" };
+                        }
+                        if (!(user.secret_totp))
+                        {
+                            return ({success:true, activated : false});
+                        }
+                        else
+                        {
+                            return ({success:true, activated : true});
+
+                        }
+                } catch (err){
+                        return reply.status(500).send({success: false, error : 'db_access'});                          
+                }
+        });
 
         // Route logout : supprime le cookie JWT et la session de login_history
         fastify.post('/api/logout', {preValidation: [fastify.authenticate]}, async (request, reply) => {
@@ -1236,16 +1388,26 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                     [request.user.id, blockedUserId, blockedUserId, request.user.id]
                 );
 
+                // Récupérer les infos des utilisateurs pour la notification
+                const blockerUser = await db.get("SELECT username, avatar_url FROM users WHERE id = ?", [request.user.id]);
+                const blockedUser = await db.get("SELECT username, avatar_url FROM users WHERE id = ?", [blockedUserId]);
+
+                // Notifier l'utilisateur bloqué en temps réel
+                const blockedSocket = friendNotificationClients.get(blockedUserId);
+                if (blockedSocket && blockedSocket.readyState === blockedSocket.OPEN) {
+                    blockedSocket.send(JSON.stringify({
+                        type: 'user_blocked',
+                        blocker_id: request.user.id,
+                        blocker_username: blockerUser.username,
+                        blocker_avatar: blockerUser.avatar_url || '/uploads/default.png'
+                    }));
+                }
+
                 return reply.send({ success: true, message: 'user_blocked' });
             } catch (err) {
                 console.error('Error blocking user:', err);
                 return reply.status(500).send({ success: false, error: 'db_access' });
             }
-        });
-
-        // Bloquer un utilisateur (existing GET route)
-        fastify.get('/api/block_user/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
-            // ...existing code...
         });
 
         // Débloquer un utilisateur
@@ -1267,6 +1429,21 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                     "DELETE FROM blocked_users WHERE user_id = ? AND blocked_user_id = ?",
                     [request.user.id, blockedUserId]
                 );
+
+                // Récupérer les infos des utilisateurs pour la notification
+                const unblockerUser = await db.get("SELECT username, avatar_url FROM users WHERE id = ?", [request.user.id]);
+                const unblockedUser = await db.get("SELECT username, avatar_url FROM users WHERE id = ?", [blockedUserId]);
+
+                // Notifier l'utilisateur débloqué en temps réel
+                const unblockedSocket = friendNotificationClients.get(blockedUserId);
+                if (unblockedSocket && unblockedSocket.readyState === unblockedSocket.OPEN) {
+                    unblockedSocket.send(JSON.stringify({
+                        type: 'user_unblocked',
+                        unblocker_id: request.user.id,
+                        unblocker_username: unblockerUser.username,
+                        unblocker_avatar: unblockerUser.avatar_url || '/uploads/default.png'
+                    }));
+                }
 
                 return reply.send({ success: true, message: 'user_unblocked' });
             } catch (err) {
@@ -1387,6 +1564,485 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
             }
         });
 
+
+
+        // Récupère toutes les informations sur les matchs et stats des matchs d'un joueur
+        fastify.get('/api/matchs_profile/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+
+                const id_profile = Number(request.params.id);
+
+                // Vérifie si les utilisateurs sont amis
+                try {
+
+                    // Vérifie si l'user id existe
+                    const user = await db.get("SELECT * FROM users WHERE id = ?", [id_profile]);
+                    if (!user)
+                    {
+                        return ({success:false, error:"user_not_found"});
+                    }
+
+                    // Get both Pong and Connect4 matches
+                    const pongMatches = await db.all(
+                        "SELECT * FROM matchs_history WHERE (first_player = ? OR second_player = ?) AND bypass = false AND winner_id IS NOT NULL",
+                        [id_profile, id_profile]
+                    );
+                    
+                    const connect4Matches = await db.all(
+                        "SELECT * FROM connect4_online_matchs_history WHERE (first_player = ? OR second_player = ?) AND bypass = false AND winner_id IS NOT NULL",
+                        [id_profile, id_profile]
+                    );
+
+                    // Combine all matches
+                    const allMatches = [
+                        ...(pongMatches || []).map(match => ({ ...match, game_type: 'pong' })),
+                        ...(connect4Matches || []).map(match => ({ ...match, game_type: 'connect4' }))
+                    ];
+
+                    if (!allMatches || allMatches.length === 0) {
+                        return ({success : false, error : "no_match"});
+                    }
+                    else
+                    {
+                        // Au moins un match joué
+                        let nb_played = 0;
+                        let nb_won = 0;
+                        const new_matchs = [];
+                        for (const match of allMatches)
+                        {
+                            nb_played++;
+                            if (Number(match.winner_id) === id_profile)
+                            {
+                                nb_won++;
+                            }
+
+                            const new_match_one = {};
+
+                            
+                            // Je récupère le nom de l'autre joueur
+                            if (Number(match.first_player) == id_profile)
+                            {
+                                const user = await db.get("SELECT * FROM users WHERE id = ?", [match.second_player]);
+                                if (user)
+                                {
+                                    new_match_one.other_player = user.username;
+
+                                } else
+                                {
+                                    new_match_one.other_player = "Unknown";
+                                }
+                            }
+                            else
+                            {
+                                const user = await db.get("SELECT * FROM users WHERE id = ?", [match.first_player]);
+                                if (user)
+                                {
+                                    new_match_one.other_player = user.username;
+
+                                } else
+                                {
+                                    new_match_one.other_player = "Unknown";
+                                }
+                            }
+
+
+                            // je récupère le nom de la room
+                            const room = await db.get("SELECT * FROM rooms WHERE id = ?", [match.id_room]);
+                            new_match_one.room_name = room ? room.name : "Unknown Room";
+
+                            // Je récupère la date
+                            new_match_one.date = match.created_at;
+
+                            // Je récupère le résulat du match
+                            if (Number(match.winner_id) == Number(id_profile))
+                            {
+                                new_match_one.won = true;
+                            }
+                            else
+                            {
+                                new_match_one.won = false;
+                            }
+
+                            // Je récupère l'id du match
+                            new_match_one.match_id = match.id;
+
+                            // Add game type
+                            new_match_one.game_type = match.game_type;
+
+                            // Je met l'objet du match dans un tableau
+                            new_matchs.push(new_match_one);
+
+                        }
+
+                        let percent_won;
+                        let percent_lost;
+                        if (nb_played != 0)
+                        {
+                            percent_won = Math.round((nb_won / nb_played) * 100);
+                            percent_lost = 100 - percent_won;
+                        }
+                        else
+                        {
+                            percent_won = 0;
+                            percent_lost = 0;
+                        }
+
+                        return ({success:true, nb_played, nb_won, percent_won, percent_lost, matchs: new_matchs});
+                        // return "matchs";
+                    }
+
+
+                } catch (err)
+                {
+                    return ({success : false, error : "db_access"});
+                }
+        });
+
+
+        // Récupère toutes les informations sur les matchs et stats des matchs d'un joueur
+        fastify.get('/api/connect4/matchs_profile/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+
+                const id_profile = Number(request.params.id);
+
+                // Vérifie si les utilisateurs sont amis
+                try {
+
+                    // Vérifie si l'user id existe
+                    const user = await db.get("SELECT * FROM users WHERE id = ?", [id_profile]);
+                    if (!user)
+                    {
+                        return ({success:false, error:"user_not_found"});
+                    }
+
+
+                    const matchs = await db.all(
+                        "SELECT * FROM connect4_online_matchs_history WHERE (first_player = ? OR second_player = ?) AND bypass = false AND winner_id IS NOT NULL",
+                        [id_profile, id_profile]
+                    );
+                    if (!matchs) {
+                        return ({success : false, error : "no_match"});
+                    }
+                    else
+                    {
+                        // Au moins un match joué
+                        let nb_played = 0;
+                        let nb_won = 0;
+                        const new_matchs = [];
+                        for (const match of matchs)
+                        {
+                            nb_played++;
+                            if (Number(match.winner_id) === id_profile)
+                            {
+                                nb_won++;
+                            }
+
+                            const new_match_one = {};
+
+                            
+                            // Je récupère le nom de l'autre joueur
+                            if (Number(match.first_player) == id_profile)
+                            {
+                                const user = await db.get("SELECT * FROM users WHERE id = ?", [match.second_player]);
+                                if (user)
+                                {
+                                    new_match_one.other_player = user.username;
+
+                                } else
+                                {
+                                    new_match_one.other_player = "Unknown";
+                                }
+                            }
+                            else
+                            {
+                                const user = await db.get("SELECT * FROM users WHERE id = ?", [match.first_player]);
+                                if (user)
+                                {
+                                    new_match_one.other_player = user.username;
+
+                                } else
+                                {
+                                    new_match_one.other_player = "Unknown";
+                                }
+                            }
+
+
+                            // je récupère le nom de la room
+                            const room = await db.get("SELECT * FROM rooms WHERE id = ?", [match.id_room]);
+                            new_match_one.room_name = room.name;
+
+                            // Je récupère la date
+                            new_match_one.date = match.created_at;
+
+                            // Je récupère le résulat du match
+                            if (Number(match.winner_id) == Number(id_profile))
+                            {
+                                new_match_one.won = true;
+                            }
+                            else
+                            {
+                                new_match_one.won = false;
+                            }
+
+                            // Je récupère l'id du match
+                            new_match_one.match_id = match.id;
+
+                            // Je met l'objet du match dans un tableau
+                            new_matchs.push(new_match_one);
+
+                        }
+
+                        let percent_won;
+                        let percent_lost;
+                        if (nb_played != 0)
+                        {
+                            percent_won = Math.round((nb_won / nb_played) * 100);
+                            percent_lost = 100 - percent_won;
+                        }
+                        else
+                        {
+                            percent_won = 0;
+                            percent_lost = 0;
+                        }
+
+                        return ({success:true, nb_played, nb_won, percent_won, percent_lost, matchs: new_matchs});
+                        // return "matchs";
+                    }
+
+
+                } catch (err)
+                {
+                    return ({success : false, error : "db_access"});
+                }
+        });
+
+
+        // Ajouter un ami (crée une demande d'ami)
+        fastify.get('/api/add_friend/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+            try {
+                const friendId = Number(request.params.id);
+
+                // Vérifie si l'utilisateur est bloqué (dans les deux sens)
+                const isBlocked = await db.get(
+                    "SELECT * FROM blocked_users WHERE (user_id = ? AND blocked_user_id = ?) OR (user_id = ? AND blocked_user_id = ?)",
+                    [request.user.id, friendId, friendId, request.user.id]
+                );
+                if (isBlocked) {
+                    return reply.status(403).send({ success: false, error: 'user_blocked' });
+                }
+
+                // Vérifie si une demande existe déjà
+                const existingRequest = await db.get(
+                    "SELECT * FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'pending'",
+                    [request.user.id, friendId]
+                );
+                if (existingRequest) {
+                    return reply.status(409).send({ success: false, error: 'friend_request_already_sent' });
+                }
+
+                // Vérifie si les utilisateurs sont déjà amis
+                const existingFriend = await db.get(
+                    "SELECT * FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'accepted'",
+                    [request.user.id, friendId]
+                );
+                if (existingFriend) {
+                    return reply.status(409).send({ success: false, error: 'already_friends' });
+                }
+
+                // Crée une demande d'ami
+                await db.run(
+                    "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'pending')",
+                    [request.user.id, friendId]
+                );
+
+                // Notifie l'utilisateur cible en temps réel (WebSocket)
+                const targetSocket = friendNotificationClients.get(friendId);
+                if (targetSocket && targetSocket.readyState === targetSocket.OPEN) {
+                    targetSocket.send(JSON.stringify({
+                        type: 'friend_request',
+                        from: request.user.id,
+                        username: request.user.username,
+                        avatar_url: request.user.avatar_url || '/uploads/default.png'
+                    }));
+                }
+
+                return reply.send({ success: true, message: 'friend_request_sent' });
+            } catch (err) {
+                console.error('Error in /api/add_friend:', err);
+                return reply.status(500).send({ success: false, error: 'db_access' });
+            }
+        });
+
+        // Accepter une demande d'ami
+        fastify.get('/api/accept_friend/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+            try {
+                const friendId = Number(request.params.id);
+
+                // Vérifie si une demande d'ami en attente existe
+                const pendingRequest = await db.get(
+                    "SELECT * FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'pending'",
+                    [friendId, request.user.id]
+                );
+                if (!pendingRequest) {
+                    return reply.status(404).send({ success: false, error: 'no_pending_request' });
+                }
+
+                // Met à jour le statut à 'accepted'
+                await db.run(
+                    "UPDATE friends SET status = 'accepted' WHERE user_id = ? AND friend_id = ?",
+                    [friendId, request.user.id]
+                );
+
+                // Crée la relation réciproque
+                await db.run(
+                    "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'accepted')",
+                    [request.user.id, friendId]
+                );
+
+                // Récupérer les infos de l'utilisateur qui accepte pour la notification
+                const accepterUser = await db.get("SELECT username, avatar_url FROM users WHERE id = ?", [request.user.id]);
+
+                // Notifie l'utilisateur qui avait envoyé la demande
+                const senderSocket = friendNotificationClients.get(friendId);
+                if (senderSocket) {
+                    senderSocket.send(JSON.stringify({ 
+                        type: 'friend_request_accepted', 
+                        from: request.user.id,
+                        username: accepterUser.username,
+                        avatar_url: accepterUser.avatar_url || '/uploads/default.png'
+                    }));
+                }
+
+                return reply.send({ success: true, message: 'friend_request_accepted' });
+            } catch (err) {
+                return reply.status(500).send({ success: false, error: 'db_access' });
+            }
+        });
+
+        // Décliner une demande d'ami
+        fastify.get('/api/decline_friend/:id', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+            try {
+                const friendId = Number(request.params.id);
+
+                // Vérifie si une demande d'ami en attente existe
+                const pendingRequest = await db.get(
+                    "SELECT * FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'pending'",
+                    [friendId, request.user.id]
+                );
+                if (!pendingRequest) {
+                    return reply.status(404).send({ success: false, error: 'no_pending_request' });
+                }
+
+                // Supprime la demande d'ami
+                await db.run(
+                    "DELETE FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'pending'",
+                    [friendId, request.user.id]
+                );
+
+                // Récupérer les infos de l'utilisateur qui refuse pour la notification
+                const declinerUser = await db.get("SELECT username, avatar_url FROM users WHERE id = ?", [request.user.id]);
+
+                //console.log('Sending decline notification to user:', friendId); // Debug log
+                console.log('Available clients:', Array.from(friendNotificationClients.keys())); // Debug log
+
+                // Notifie l'utilisateur qui avait envoyé la demande
+                const senderSocket = friendNotificationClients.get(friendId);
+                if (senderSocket && senderSocket.readyState === senderSocket.OPEN) {
+                    //console.log('Sending WebSocket notification for decline'); // Debug log
+                    senderSocket.send(JSON.stringify({
+                        type: 'friend_request_declined',
+                        from: request.user.id,
+                        username: declinerUser.username,
+                        avatar_url: declinerUser.avatar_url || '/uploads/default.png'
+                    }));
+                } else {
+                    //console.log('No active WebSocket connection for user:', friendId); // Debug log
+                }
+
+                return reply.send({ success: true, message: 'friend_request_declined' });
+            } catch (err) {
+                console.error('Error declining friend request:', err);
+                return reply.status(500).send({ success: false, error: 'db_access' });
+            }
+        });
+
+        // Récupérer les demandes d'amis
+        fastify.get('/api/friend_requests', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+            try {
+                const requests = await db.all(
+                    "SELECT f.user_id as senderId, u.username, u.avatar_url FROM friends f " +
+                    "LEFT JOIN users u ON f.user_id = u.id " +
+                    "WHERE f.friend_id = ? AND f.status = 'pending'",
+                    [request.user.id]
+                );
+                return reply.send({ success: true, requests });
+            } catch (err) {
+                console.error('Error in /api/friend_requests:', err);
+                return reply.status(500).send({ success: false, error: 'db_access' });
+            }
+        });
+
+        // Récupère la liste d'amis (uniquement les amis acceptés)
+        fastify.get('/api/friends', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+            try {
+                const friends = await db.all(
+                    `SELECT u.id, u.username, u.last_online, u.avatar_url
+                     FROM friends f
+                     JOIN users u ON f.friend_id = u.id
+                     WHERE f.user_id = ? AND f.status = 'accepted'`,
+                    [request.user.id]
+                );
+
+                // Add online status
+                friends.forEach(friend => {
+                    const online = new Date(friend.last_online).getTime() / 1000;
+                    const now = Math.floor(new Date().getTime() / 1000);
+                    friend.online = (now - online) < 60; // Online if last seen within 60 seconds
+                });
+
+                return reply.send({ success: true, friends });
+            } catch (err) {
+                return reply.status(500).send({ success: false, error: 'db_access' });
+            }
+        });
+
+        // Send game invitation to a friend
+        fastify.post('/api/invite_friend_game/:friendId', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+            try {
+                const senderId = request.user.id;
+                const friendId = parseInt(request.params.friendId);
+
+                // Verify friendship exists
+                const friendship = await db.get(
+                    `SELECT COUNT(*) as count FROM friends 
+                     WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) 
+                     AND status = 'accepted'`,
+                    [senderId, friendId, friendId, senderId]
+                );
+
+                if (friendship.count === 0) {
+                    return reply.status(400).send({ success: false, error: 'not_friends' });
+                }
+
+                // Get sender info
+                const sender = await db.get('SELECT username FROM users WHERE id = ?', [senderId]);
+                
+                // Send notification to friend via WebSocket
+                const targetSocket = friendNotificationClients.get(friendId);
+                if (targetSocket && targetSocket.readyState === 1) {
+                    targetSocket.send(JSON.stringify({
+                        type: 'game_invite',
+                        from: senderId,
+                        username: sender.username,
+                        message: `${sender.username} invited you to play a game!`,
+                        timestamp: new Date().toISOString()
+                    }));
+                }
+
+                return reply.send({ success: true, message: 'Game invitation sent' });
+            } catch (err) {
+                console.error('Error sending game invitation:', err);
+                return reply.status(500).send({ success: false, error: 'server_error' });
+            }
+        });
 }
 
 // Rien à changer ici pour la persistance de connexion via cookie JWT

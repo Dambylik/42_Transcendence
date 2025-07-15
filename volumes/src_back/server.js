@@ -1,14 +1,15 @@
 // Importations
-const fastify = require('fastify')({   logger: {
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        translateTime: 'HH:MM:ss',
-        ignore: 'pid,hostname',
-        colorize : true
-      }
-    }
-  } });
+// const fastify = require('fastify')({   logger: {
+//     transport: {
+//       target: 'pino-pretty',
+//       options: {
+//         translateTime: 'HH:MM:ss',
+//         ignore: 'pid,hostname',
+//         colorize : true
+//       }
+//     }
+//   } });
+const fastify = require('fastify')();
 const cookie = require('@fastify/cookie');
 const jwt = require('@fastify/jwt');
 const cors = require('@fastify/cors');
@@ -37,13 +38,14 @@ db.run = util.promisify(db.run);
 db.get = util.promisify(db.get);
 db.all = util.promisify(db.all);
 
+const SECRET_JWT = process.env.JWT_SECRET; // A mettre dans un fichier .env !!!!
 
 // Mise en place du JWT
 fastify.register(cookie);
 // fastify.register(websocket);
 fastify.register(multipart);
 fastify.register(jwt, {
-        secret: 'laclesecrete_a_mettre_dans_fichier_env', // !!!!! ENV !!!
+        secret: SECRET_JWT, // !!!!! ENV !!!
         cookie: {
           cookieName: "token",
           signed : false

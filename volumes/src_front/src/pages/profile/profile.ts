@@ -1,91 +1,230 @@
 import Page from '../../core/templates/page';
 import { Router } from '../../../router/Router';
 
-type GameHistoryEntry = {
-    date: string;
-    id: number;
-    room: string;
-    roomIcon: string;
-    friend: string;
-    score: string;
-    status: string;
+// type GameHistoryEntry = {
+//     date: string;
+//     id: number;
+//     room: string;
+//     roomIcon: string;
+//     friend: string;
+//     score: string;
+//     status: string;
+// };
+
+type MatchsHistory = {
+    other_player : string;
+    room_name : string;
+    date : string;
+    won : boolean;
+    match_id : number;
 };
 
 class ProfilePage extends Page {
     private username: string = '';
     private avatarUrl: string = '';
-    private gameHistory: GameHistoryEntry[];
+    // private gameHistory: GameHistoryEntry[];
 
     // Ajoute une propriété pour garder la référence WebSocket
     private friendWs?: WebSocket;
     private onlineStatusWs?: WebSocket;
 
+    // Ajouts d'Idriss pour les stats et historiques des matchs
+    private nb_played : number = 0;
+    private percent_won : number = 0;
+    private percent_lost : number = 0;
+    
+    // Stats spécifiques pour Connect4
+    private nb_played_connect4 : number = 0;
+    private percent_won_connect4 : number = 0;
+    private percent_lost_connect4 : number = 0;
+
     constructor(id: string, router?: Router, options?: { username: string }) {
         super(id, router);
 
         // Historique en dur
-        this.gameHistory = [
-            {
-                date: "2025-10-01",
-                id: 1,
-                room: "INFINITE ROOM",
-                roomIcon: "🍚",
-                friend: "JU-JU",
-                score: "10-2",
-                status: "WIN"
-            },
-            {
-                date: "2025-10-01",
-                id: 2,
-                room: "RUGGED ROOM", 
-                roomIcon: "🐼",
-                friend: "OLGA",
-                score: "0-2",
-                status: "LOSS"
-            },
-            {
-                date: "2025-10-01",
-                id: 3,
-                room: "IDRISS ROOM",
-                roomIcon: "🐾", 
-                friend: "SAMI",
-                score: "10-8",
-                status: "WIN"
-            }
-        ];
+        // this.gameHistory = [
+        //     {
+        //         date: "2025-10-01",
+        //         id: 1,
+        //         room: "INFINITE ROOM",
+        //         roomIcon: "🍚",
+        //         friend: "JU-JU",
+        //         score: "10-2",
+        //         status: "WIN"
+        //     },
+        //     {
+        //         date: "2025-10-01",
+        //         id: 2,
+        //         room: "RUGGED ROOM", 
+        //         roomIcon: "🐼",
+        //         friend: "OLGA",
+        //         score: "0-2",
+        //         status: "LOSS"
+        //     },
+        //     {
+        //         date: "2025-10-01",
+        //         id: 3,
+        //         room: "IDRISS ROOM",
+        //         roomIcon: "🐾", 
+        //         friend: "SAMI",
+        //         score: "10-8",
+        //         status: "WIN"
+        //     }
+        // ];
 
         if (options?.username) {
             this.username = options.username;
         }
+
+
+        // A faire : stocker les données du profil (matchs history et stats)
+
     }
 
-    private generateGameRowsHTML(): string {
-        return this.gameHistory.map(game => `
+    // Récupère la liste des matchs 1v1
+    private async getStatsAndMatchs(id_profile : number)
+    {
+        // Pour TEST UNIQUEMENT
+        // id_profile = 171;
+        // let room_id = document.getElementById('idRoom').value;
+        try {
+            const response = await fetch('https://localhost:4430/api/matchs_profile/' + id_profile, {
+            method: 'GET',
+            credentials: 'include'
+            });
+
+            if (!response.ok)
+            {
+            throw new Error('erreur http : ' + response.status);
+            }
+
+            const result = await response.json();
+            if (result.success == false)
+            {
+                // alert("cannot get results");
+            }
+            else
+            {
+                // On change la liste des matchs et stats dans la classe
+                // alert(JSON.stringify(result));
+                // alert("id profile = " + id_profile);
+                // alert(this.nb_played + "" + this.percent_won + "" + this.percent_lost + "");
+                this.nb_played = result.nb_played;
+                this.percent_won = result.percent_won; 
+                this.percent_lost = result.percent_lost; 
+                return (result);
+            }
+            // alert("resultat envoi formulaire (join room) : " + JSON.stringify(result));
+            return (result);
+        } catch (err)
+        {
+            // alert("erreur denvoi formulaire create room");
+        }
+
+    }
+
+    // Récupère la liste des matchs 1v1 Pong
+    private async getPongMatchs(id_profile: number) {
+        try {
+            const response = await fetch('https://localhost:4430/api/matchs_profile/' + id_profile, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error('erreur http : ' + response.status);
+            const result = await response.json();
+            if (result.success === false) return [];
+            // Filtre uniquement les matchs Pong (par défaut ou game_type absent)
+            return (result.matchs || []).filter((m: any) => !m.game_type || m.game_type === 'pong');
+        } catch (err) {
+            return [];
+        }
+    }
+
+    // Récupère la liste des matchs 1v1 Connect4
+    private async getConnect4Matchs(id_profile: number) {
+        try {
+            // Utilise le même endpoint que Pong, car le backend renvoie tous les matchs
+            const response = await fetch('https://localhost:4430/api/matchs_profile/' + id_profile, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error('erreur http : ' + response.status);
+            const result = await response.json();
+            if (result.success === false) return [];
+            
+            // Calcule les stats pour Connect4
+            const connect4Matchs = (result.matchs || []).filter((m: any) => m.game_type === 'connect4');
+            
+            this.nb_played_connect4 = connect4Matchs.length;
+            const wins = connect4Matchs.filter((m: any) => m.won === true).length;
+            this.percent_won_connect4 = this.nb_played_connect4 > 0 ? Math.round((wins / this.nb_played_connect4) * 100) : 0;
+            this.percent_lost_connect4 = this.nb_played_connect4 > 0 ? Math.round(((this.nb_played_connect4 - wins) / this.nb_played_connect4) * 100) : 0;
+            
+            // Filtre uniquement les matchs Connect4
+            return connect4Matchs;
+        } catch (err) {
+            console.error('Error fetching Connect4 matchs:', err);
+            return [];
+        }
+    }
+
+    // Génère le HTML pour les lignes de matchs Pong
+    private async generatePongGameRowsHTML(id_profile: number) {
+        const matchs: MatchsHistory[] = await this.getPongMatchs(id_profile);
+        return matchs.map(game => `
             <tr class="border-b border-gray-700/50 hover:bg-cyber-dark/70 transition-colors">
                 <td class="py-4 text-center">
                     <span class="text-white font-tech">${game.date}</span>
                 </td>    
                 <td class="py-4 text-center">
                     <div class="flex items-center justify-center space-x-3">
-                        <div class="w-8 h-8 bg-neon-cyan/20 rounded-sm border border-neon-cyan/50 flex items-center justify-center text-neon-cyan">
-                            ${game.roomIcon}
-                        </div>
-                        <span class="text-white font-tech">${game.room}</span>
+                        <span class="text-white font-tech">${game.room_name}</span>
                     </div>
                 </td>
                 <td class="py-4 text-center">
-                    <span class="text-white font-tech">${game.friend}</span>
-                </td>
-                <td class="py-4 text-center">
-                    <span class="text-white font-tech">${game.score}</span>
+                    <span class="text-white font-tech">${game.other_player}</span>
                 </td>
                 <td class="py-4 text-center">
                     <span class="font-cyber text-sm font-bold px-3 py-1 rounded-sm ${
-                        game.status === 'WIN' 
+                        game.won === true 
                             ? 'text-green-400 bg-green-900/20 border border-green-500/30' 
                             : 'text-red-400 bg-red-900/20 border border-red-500/30'
                     }">
-                        ${game.status}
+                        ${game.won === true ? "won" : "lost"}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Génère le HTML pour les lignes de matchs Connect4
+    private async generateConnect4GameRowsHTML(id_profile: number) {
+        const matchs: MatchsHistory[] = await this.getConnect4Matchs(id_profile);
+        
+        if (matchs.length === 0) {
+            return `<tr><td colspan="4" class="py-8 text-center text-gray-400 font-cyber">No Connect4 matches found</td></tr>`;
+        }
+        
+        return matchs.map(game => `
+            <tr class="border-b border-gray-700/50 hover:bg-cyber-dark/70 transition-colors">
+                <td class="py-4 text-center">
+                    <span class="text-white font-tech">${game.date}</span>
+                </td>    
+                <td class="py-4 text-center">
+                    <div class="flex items-center justify-center space-x-3">
+                        <span class="text-white font-tech">${game.room_name}</span>
+                    </div>
+                </td>
+                <td class="py-4 text-center">
+                    <span class="text-white font-tech">${game.other_player}</span>
+                </td>
+                <td class="py-4 text-center">
+                    <span class="font-cyber text-sm font-bold px-3 py-1 rounded-sm ${
+                        game.won === true 
+                            ? 'text-green-400 bg-green-900/20 border border-green-500/30' 
+                            : 'text-red-400 bg-red-900/20 border border-red-500/30'
+                    }">
+                        ${game.won === true ? "won" : "lost"}
                     </span>
                 </td>
             </tr>
@@ -287,6 +426,12 @@ class ProfilePage extends Page {
             profileError = true;
         }
 
+        // Je récupère les données stats du profile ainsi que l'historique des matchs
+        await this.getStatsAndMatchs(data.id);
+        // Prépare les historiques séparés (et calcule les stats Connect4)
+        const pongRows = await this.generatePongGameRowsHTML(data.id);
+        const connect4Rows = await this.generateConnect4GameRowsHTML(data.id);
+
         const profileContent = document.createElement('div');
         profileContent.className = 'min-h-screen pt-4 relative overflow-hidden flex flex-row bg-cyber-dark'; // pt-16 -> pt-4
 
@@ -367,65 +512,76 @@ class ProfilePage extends Page {
                                         </span>
                                     </h2>
                                     <p class="text-sm text-gray-400 mb-4">Last Online: ${
-                                        data.last_online ? new Date(data.last_online).toLocaleString() : 'Never'
+                                        data.last_online ? new Date(data.last_online + 'Z').toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) : 'Never'
                                     }</p>
                                     <p class="text-sm text-gray-400 mb-4">Joined: ${
-                                        data.created_at ? new Date(data.created_at).toLocaleDateString() : 'Unknown'
+                                        data.created_at ? new Date(data.created_at + 'Z').toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }) : 'Unknown'
                                     }</p>
                                     <!-- No action buttons when blocked -->
                                 </div>
                             </div>
-                            <!-- Stats and Game History (unchanged) -->
-                            <div class="cyber-panel mx-8 mb-8 p-6 border-2 border-neon-cyan/30 bg-cyber-darker/80 backdrop-blur-sm relative">
-                                <h2 class="text-2xl font-cyber font-bold text-neon-cyan mb-6 tracking-wider">PLAYER STATISTICS</h2>
-                                <div class="grid grid-cols-3 gap-6">
-                                    <div class="cyber-panel p-6 text-center bg-cyber-dark border border-neon-pink/30">
-                                        <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">TOTAL GAMES</h3>
-                                        <div class="text-4xl font-cyber text-white font-bold mt-2">1956</div>
-                                    </div>
-                                    <div class="cyber-panel p-6 text-center bg-cyber-dark border border-neon-pink/30">
-                                        <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">WIN RATE</h3>
-                                        <div class="text-4xl font-cyber text-green-400 font-bold mt-2">85%</div>
-                                    </div>
-                                    <div class="cyber-panel p-6 text-center bg-cyber-dark border border-neon-pink/30">
-                                        <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">LOSS RATE</h3>
-                                        <div class="text-4xl font-cyber text-red-400 font-bold mt-2">25%</div>
-                                    </div>
+                            <!-- Stats and Game History (with improved design) -->
+                            <div class="mx-8 mb-8">
+                                <div class="flex items-center justify-center mb-8">
+                                    <h1 class="text-3xl font-cyber text-neon-cyan animate-glow-pulse tracking-wider">GAME STATISTICS</h1>
                                 </div>
-                                <div class="cyber-panel mt-6 p-6 text-center bg-cyber-dark border border-neon-cyan/30">
-                                    <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">LEVEL</h3>
-                                    <div class="text-4xl font-cyber text-white font-bold mt-2">${data.level}</div>
-                                    <div class="mt-4">
-                                        <div class="flex justify-between text-sm text-gray-400 mb-2">
-                                            <span>Level ${Math.max(data.level - 1, 0)}</span>
-                                            <span>Level ${data.level + 1}</span>
+                                
+                                <!-- Combined Stats Panel -->
+                                <div class="cyber-panel p-6 border-2 border-neon-cyan/30 bg-cyber-darker/80 backdrop-blur-sm relative">
+                                    <div class="grid grid-cols-2 gap-8">
+                                        <!-- Pong Stats -->
+                                        <div class="border-r border-gray-600/50 pr-8">
+                                            <div class="flex items-center justify-center mb-4">
+                                                <div class="w-10 h-10 bg-neon-cyan/20 rounded-lg border border-neon-cyan flex items-center justify-center mr-3">
+                                                    <span class="text-neon-cyan font-cyber text-lg">🏓</span>
+                                                </div>
+                                                <h3 class="text-xl font-cyber font-bold text-neon-cyan tracking-wider">PONG</h3>
+                                            </div>
+                                            <div class="grid grid-cols-1 gap-4">
+                                                <div class="text-center">
+                                                    <div class="text-2xl font-cyber text-white font-bold">1956</div>
+                                                    <div class="text-sm text-gray-400 font-cyber">Total Games</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-2xl font-cyber text-green-400 font-bold">85%</div>
+                                                    <div class="text-sm text-gray-400 font-cyber">Win Rate</div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="w-full bg-gray-700 rounded-full h-4 relative">
-                                            <div class="bg-neon-cyan h-4 rounded-full" style="width: ${(data.xp / 100) * 100}%;"></div>
-                                            <span class="absolute inset-0 flex items-center justify-center text-sm text-white font-bold">
-                                                ${data.xp} XP / ${data.xp + 100} XP
-                                            </span>
+                                        
+                                        <!-- Connect4 Stats -->
+                                        <div class="pl-8">
+                                            <div class="flex items-center justify-center mb-4">
+                                                <div class="w-10 h-10 bg-neon-pink/20 rounded-lg border border-neon-pink flex items-center justify-center mr-3">
+                                                    <span class="text-neon-pink font-cyber text-lg">🔴</span>
+                                                </div>
+                                                <h3 class="text-xl font-cyber font-bold text-neon-pink tracking-wider">CONNECT4</h3>
+                                            </div>
+                                            <div class="grid grid-cols-1 gap-4">
+                                                <div class="text-center">
+                                                    <div class="text-2xl font-cyber text-white font-bold">342</div>
+                                                    <div class="text-sm text-gray-400 font-cyber">Total Games</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-2xl font-cyber text-green-400 font-bold">78%</div>
+                                                    <div class="text-sm text-gray-400 font-cyber">Win Rate</div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="cyber-panel mx-8 mb-8 p-6 border-2 border-neon-pink/30 bg-cyber-darker/80 backdrop-blur-sm relative">
-                                <h2 class="text-2xl font-cyber font-bold text-neon-pink mb-6 tracking-wider">GAME HISTORY</h2>
-                                <div class="overflow-auto max-h-96 cyber-scrollbar">
-                                    <table class="w-full table-fixed">
-                                        <thead class="sticky top-0 bg-cyber-darker z-10">
-                                            <tr class="border-b-2 border-neon-pink/30">
-                                                <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">DATE</th>
-                                                <th class="w-1/3 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">GAME ROOM</th>
-                                                <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">FRIEND</th>
-                                                <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">SCORE</th>
-                                                <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">RESULT</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${this.generateGameRowsHTML()}
-                                        </tbody>
-                                    </table>
+                            <div class="mx-8 mb-8">
+                                <div class="flex items-center justify-center mb-8">
+                                    <h1 class="text-3xl font-cyber text-neon-purple animate-glow-pulse tracking-wider">MATCH HISTORY</h1>
+                                </div>
+                                
+                                <div class="cyber-panel p-6 border-2 border-gray-500/30 bg-cyber-darker/80 backdrop-blur-sm relative">
+                                    <div class="text-center py-8">
+                                        <div class="text-gray-400 text-4xl mb-4">🔒</div>
+                                        <h3 class="text-xl font-cyber text-gray-400 mb-2">MATCH HISTORY BLOCKED</h3>
+                                        <p class="text-sm text-gray-500 font-cyber">Match history is not available for blocked users</p>
+                                    </div>
                                 </div>
                             </div>
                         </main>
@@ -525,75 +681,173 @@ class ProfilePage extends Page {
                             </span>
                         </h2>
                         <p class="text-sm text-gray-400 mb-4">Last Online: ${
-                            data.last_online ? new Date(data.last_online).toLocaleString() : 'Never'
+                            data.last_online ? new Date(data.last_online + 'Z').toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) : 'Never'
                         }</p>
                         <p class="text-sm text-gray-400 mb-4">Joined: ${
-                            data.created_at ? new Date(data.created_at).toLocaleDateString() : 'Unknown'
+                            data.created_at ? new Date(data.created_at + 'Z').toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }) : 'Unknown'
                         }</p>
                         <div class="profile-action-btns flex space-x-4">
                           ${actionBtnsHtml}
                         </div>
                     </div>
                 </div>
-                <!-- Stats Content Container -->
-                <div class="cyber-panel mx-8 mb-8 p-6 border-2 border-neon-cyan/30 bg-cyber-darker/80 backdrop-blur-sm relative">
-                    <h2 class="text-2xl font-cyber font-bold text-neon-cyan mb-6 tracking-wider">PLAYER STATISTICS</h2>
+                <!-- Game Stats Section -->
+                <div class="mx-8 mb-8">
+                    <div class="flex items-center justify-center mb-8">
+                        <h1 class="text-3xl font-cyber text-neon-cyan animate-glow-pulse tracking-wider">GAME STATISTICS</h1>
+                    </div>
                     
-                    <div class="grid grid-cols-3 gap-6">
-                        <div class="cyber-panel p-6 text-center bg-cyber-dark border border-neon-pink/30">
-                            <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">TOTAL GAMES</h3>
-                            <div class="text-4xl font-cyber text-white font-bold mt-2">1956</div>
+                    <!-- Pong Stats -->
+                    <div class="cyber-panel mb-6 p-6 border-2 border-neon-cyan/50 bg-gradient-to-br from-neon-cyan/10 to-cyber-darker/80 backdrop-blur-sm relative overflow-hidden">
+                        <!-- Pong Background Pattern -->
+                        <div class="absolute inset-0 opacity-5">
+                            <div class="absolute top-4 left-4 w-2 h-2 bg-neon-cyan rounded-full"></div>
+                            <div class="absolute top-4 right-4 w-2 h-2 bg-neon-cyan rounded-full"></div>
+                            <div class="absolute bottom-4 left-4 w-2 h-2 bg-neon-cyan rounded-full"></div>
+                            <div class="absolute bottom-4 right-4 w-2 h-2 bg-neon-cyan rounded-full"></div>
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-neon-cyan rounded-full"></div>
                         </div>
                         
-                        <div class="cyber-panel p-6 text-center bg-cyber-dark border border-neon-pink/30">
-                            <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">WIN RATE</h3>
-                            <div class="text-4xl font-cyber text-green-400 font-bold mt-2">85%</div>
-                        </div>
-                        
-                        <div class="cyber-panel p-6 text-center bg-cyber-dark border border-neon-pink/30">
-                            <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">LOSS RATE</h3>
-                            <div class="text-4xl font-cyber text-red-400 font-bold mt-2">25%</div>
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-center mb-6">
+                                <div class="w-10 h-10 bg-neon-cyan/20 rounded-lg border border-neon-cyan flex items-center justify-center mr-4">
+                                    <span class="text-neon-cyan font-cyber text-lg">🏓</span>
+                                </div>
+                                <h2 class="text-2xl font-cyber font-bold text-neon-cyan tracking-wider">PONG STATISTICS</h2>
+                                <div class="ml-4 h-1 w-20 bg-gradient-to-r from-neon-cyan to-transparent"></div>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-6">
+                                <div class="cyber-panel p-6 text-center bg-cyber-dark/60 border border-neon-cyan/40 hover:border-neon-cyan/80 transition-all duration-300">
+                                    <h3 class="text-neon-cyan font-bold font-cyber text-sm tracking-wider text-center mb-2">TOTAL GAMES</h3>
+                                    <div class="text-4xl font-cyber text-white font-bold mt-2">${this.nb_played}</div>
+                                </div>
+                                
+                                <div class="cyber-panel p-6 text-center bg-cyber-dark/60 border border-neon-cyan/40 hover:border-neon-cyan/80 transition-all duration-300">
+                                    <h3 class="text-neon-cyan font-bold font-cyber text-sm tracking-wider text-center mb-2">WIN RATE</h3>
+                                    <div class="text-4xl font-cyber text-green-400 font-bold mt-2">${this.percent_won}%</div>
+                                </div>
+                                
+                                <div class="cyber-panel p-6 text-center bg-cyber-dark/60 border border-neon-cyan/40 hover:border-neon-cyan/80 transition-all duration-300">
+                                    <h3 class="text-neon-cyan font-bold font-cyber text-sm tracking-wider text-center mb-2">LOSS RATE</h3>
+                                    <div class="text-4xl font-cyber text-red-400 font-bold mt-2">${this.percent_lost}%</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Level Section -->
-                    <div class="cyber-panel mt-6 p-6 text-center bg-cyber-dark border border-neon-cyan/30">
-                        <h3 class="text-yellow-400 font-bold font-cyber text-sm tracking-wider text-center">LEVEL</h3>
-                        <div class="text-4xl font-cyber text-white font-bold mt-2">${data.level}</div>
-                        <div class="mt-4">
-                            <div class="flex justify-between text-sm text-gray-400 mb-2">
-                                <span>Level ${Math.max(data.level - 1, 0)}</span>
-                                <span>Level ${data.level + 1}</span>
+                    <!-- Connect4 Stats -->
+                    <div class="cyber-panel p-6 border-2 border-neon-pink/50 bg-gradient-to-br from-neon-pink/10 to-cyber-darker/80 backdrop-blur-sm relative overflow-hidden">
+                        <!-- Connect4 Background Pattern -->
+                        <div class="absolute inset-0 opacity-5">
+                            <div class="absolute top-4 left-8 grid grid-cols-7 gap-1">
+                                ${Array(42).fill(0).map((_, i) => `<div class="w-2 h-2 bg-neon-pink rounded-full"></div>`).join('')}
                             </div>
-                            <div class="w-full bg-gray-700 rounded-full h-4 relative">
-                                <div class="bg-neon-cyan h-4 rounded-full" style="width: ${(data.xp / 100) * 100}%;"></div>
-                                <span class="absolute inset-0 flex items-center justify-center text-sm text-white font-bold">
-                                    ${data.xp} XP / ${data.xp + 100} XP
-                                </span>
+                        </div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-center mb-6">
+                                <div class="w-10 h-10 bg-neon-pink/20 rounded-lg border border-neon-pink flex items-center justify-center mr-4">
+                                    <span class="text-neon-pink font-cyber text-lg">🔴</span>
+                                </div>
+                                <h2 class="text-2xl font-cyber font-bold text-neon-pink tracking-wider">CONNECT4 STATISTICS</h2>
+                                <div class="ml-4 h-1 w-20 bg-gradient-to-r from-neon-pink to-transparent"></div>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-6">
+                                <div class="cyber-panel p-6 text-center bg-cyber-dark/60 border border-neon-pink/40 hover:border-neon-pink/80 transition-all duration-300">
+                                    <h3 class="text-neon-pink font-bold font-cyber text-sm tracking-wider text-center mb-2">TOTAL GAMES</h3>
+                                    <div class="text-4xl font-cyber text-white font-bold mt-2">${this.nb_played_connect4}</div>
+                                </div>
+                                
+                                <div class="cyber-panel p-6 text-center bg-cyber-dark/60 border border-neon-pink/40 hover:border-neon-pink/80 transition-all duration-300">
+                                    <h3 class="text-neon-pink font-bold font-cyber text-sm tracking-wider text-center mb-2">WIN RATE</h3>
+                                    <div class="text-4xl font-cyber text-green-400 font-bold mt-2">${this.percent_won_connect4}%</div>
+                                </div>
+                                
+                                <div class="cyber-panel p-6 text-center bg-cyber-dark/60 border border-neon-pink/40 hover:border-neon-pink/80 transition-all duration-300">
+                                    <h3 class="text-neon-pink font-bold font-cyber text-sm tracking-wider text-center mb-2">LOSS RATE</h3>
+                                    <div class="text-4xl font-cyber text-red-400 font-bold mt-2">${this.percent_lost_connect4}%</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Game History Section -->
-                <div class="cyber-panel mx-8 mb-8 p-6 border-2 border-neon-pink/30 bg-cyber-darker/80 backdrop-blur-sm relative">
-                    <h2 class="text-2xl font-cyber font-bold text-neon-pink mb-6 tracking-wider">GAME HISTORY</h2>
-
-                    <div class="overflow-auto max-h-96 cyber-scrollbar">
-                        <table class="w-full table-fixed">
-                            <thead class="sticky top-0 bg-cyber-darker z-10">
-                                <tr class="border-b-2 border-neon-pink/30">
-                                    <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">DATE</th>
-                                    <th class="w-1/3 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">GAME ROOM</th>
-                                    <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">FRIEND</th>
-                                    <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">SCORE</th>
-                                    <th class="w-1/6 text-yellow-400 font-cyber text-sm tracking-wider py-4 text-center">RESULT</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${this.generateGameRowsHTML()}
-                            </tbody>
-                        </table>
+                <div class="mx-8 mb-8">
+                    <div class="flex items-center justify-center mb-8">
+                        <h1 class="text-3xl font-cyber text-neon-purple animate-glow-pulse tracking-wider">MATCH HISTORY</h1>
+                    </div>
+                    
+                    <!-- Pong History -->
+                    <div class="cyber-panel mb-6 p-6 border-2 border-neon-cyan/50 bg-gradient-to-br from-neon-cyan/5 to-cyber-darker/90 backdrop-blur-sm relative">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-neon-cyan/20 rounded-lg border border-neon-cyan flex items-center justify-center mr-4">
+                                    <span class="text-neon-cyan font-cyber text-2xl">🏓</span>
+                                </div>
+                                <div>
+                                    <h2 class="text-2xl font-cyber font-bold text-neon-cyan tracking-wider">PONG MATCHES</h2>
+                                    <div class="text-sm text-gray-400 font-cyber">Classic paddle game battles</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-cyber text-neon-cyan font-bold">${this.nb_played}</div>
+                                <div class="text-sm text-gray-400 font-cyber">Total Games</div>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-auto max-h-96 cyber-scrollbar">
+                            <table class="w-full table-fixed">
+                                <thead class="sticky top-0 bg-cyber-darker/90 z-10">
+                                    <tr class="border-b-2 border-neon-cyan/40">
+                                        <th class="w-1/6 text-neon-cyan font-cyber text-sm tracking-wider py-4 text-center">DATE</th>
+                                        <th class="w-1/3 text-neon-cyan font-cyber text-sm tracking-wider py-4 text-center">GAME ROOM</th>
+                                        <th class="w-1/6 text-neon-cyan font-cyber text-sm tracking-wider py-4 text-center">OPPONENT</th>
+                                        <th class="w-1/6 text-neon-cyan font-cyber text-sm tracking-wider py-4 text-center">RESULT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${pongRows || '<tr><td colspan="4" class="py-8 text-center text-gray-400 font-cyber">No Pong matches found</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Connect4 History -->
+                    <div class="cyber-panel p-6 border-2 border-neon-pink/50 bg-gradient-to-br from-neon-pink/5 to-cyber-darker/90 backdrop-blur-sm relative">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-neon-pink/20 rounded-lg border border-neon-pink flex items-center justify-center mr-4">
+                                    <span class="text-neon-pink font-cyber text-2xl">🔴</span>
+                                </div>
+                                <div>
+                                    <h2 class="text-2xl font-cyber font-bold text-neon-pink tracking-wider">CONNECT4 MATCHES</h2>
+                                    <div class="text-sm text-gray-400 font-cyber">Four in a row strategy games</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-cyber text-neon-pink font-bold">${this.nb_played_connect4}</div>
+                                <div class="text-sm text-gray-400 font-cyber">Total Games</div>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-auto max-h-96 cyber-scrollbar">
+                            <table class="w-full table-fixed">
+                                <thead class="sticky top-0 bg-cyber-darker/90 z-10">
+                                    <tr class="border-b-2 border-neon-pink/40">
+                                        <th class="w-1/6 text-neon-pink font-cyber text-sm tracking-wider py-4 text-center">DATE</th>
+                                        <th class="w-1/3 text-neon-pink font-cyber text-sm tracking-wider py-4 text-center">GAME ROOM</th>
+                                        <th class="w-1/6 text-neon-pink font-cyber text-sm tracking-wider py-4 text-center">OPPONENT</th>
+                                        <th class="w-1/6 text-neon-pink font-cyber text-sm tracking-wider py-4 text-center">RESULT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${connect4Rows}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -650,6 +904,8 @@ class ProfilePage extends Page {
         }
 
         this.setupOnlineStatusRealtime(data, profileContent);
+
+        // alert(data.id);
 
         await super.setupSidebarListeners();
         return this.container;

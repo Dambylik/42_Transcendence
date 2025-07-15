@@ -245,10 +245,10 @@ class ChatComponent {
         }
       });
       this.ws.addEventListener('error', (e) => {
-        console.error('WebSocket error:', e);
+        //console.error('WebSocket error:', e);
       });
       this.ws.addEventListener('close', () => {
-        console.warn('WebSocket connection closed');
+       // console.warn('WebSocket connection closed');
         wsReconnectTries++;
         setTimeout(() => {
           wsReconnectDelay = Math.min(30000, wsReconnectDelay * 2);

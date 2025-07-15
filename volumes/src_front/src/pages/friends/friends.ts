@@ -21,11 +21,23 @@ class FriendsPage extends Page {
 	}
 
 	private async fetchFriendsList(): Promise<void> {
-		this.friendsList = await FriendService.fetchFriendsList();
+		try {
+			this.friendsList = await FriendService.fetchFriendsList();
+			//console.log('Friends list fetched:', this.friendsList); // Debug log
+		} catch (error) {
+			console.error('Error fetching friends list:', error);
+			this.friendsList = [];
+		}
 	}
 
 	private async fetchFriendRequests(): Promise<void> {
-		this.friendRequests = await FriendService.fetchFriendRequests();
+		try {
+			this.friendRequests = await FriendService.fetchFriendRequests();
+			//console.log('Friend requests fetched:', this.friendRequests); // Debug log
+		} catch (error) {
+			console.error('Error fetching friend requests:', error);
+			this.friendRequests = [];
+		}
 	}
 
 	private setupTabNavigation(): void {
@@ -164,36 +176,109 @@ class FriendsPage extends Page {
         `;
 	}
 
-	private renderGameInvites(): string {
+	// Affiche la liste des invitations
+	private renderInvitations(): string {
 		return `
-        <div class="p-6">
-            <div class="cyber-panel bg-cyber-darker p-6 border border-neon-cyan/30 mb-8">
-            <h3 class="text-neon-cyan font-cyber text-lg mb-2">GAME INVITES</h3>
-            <div id="game-invites-container" class="space-y-4">
-                <!-- This will be populated via JavaScript -->
-                <div class="text-center text-gray-400 font-cyber py-8">No pending game invites</div>
-            </div>
-            </div>
-        </div>
-        `;
+			<div class="p-6">
+				<div class="flex flex-col items-center justify-center py-8">
+					<div class="text-4xl mb-4 animate-glow-pulse text-neon-cyan">🎮</div>
+					<h3 class="text-neon-cyan font-cyber text-2xl mb-2 tracking-wider drop-shadow-neon">TOURNAMENT INVITATIONS</h3>
+					<div class="h-1 w-24 bg-gradient-to-r from-neon-pink to-neon-cyan mb-6 rounded-full"></div>
+					<div id="invitationsDiv" class="w-full max-w-xl space-y-4">
+						<!-- Invitations will be dynamically inserted here -->
+					</div>
+				</div>
+			</div>
+		`;
 	}
+
 
 	private setupEventListeners(): void {
 
 		// Friend list event listeners
 		const inviteButtons = this.container.querySelectorAll('.invite-game-btn');
 		inviteButtons.forEach(button => {
-			button.addEventListener('click', (e) => {
+			button.addEventListener('click', async (e) => {
 				const userId = (button as HTMLElement).dataset.userId;
 				if (userId) {
-					button.classList.add('opacity-50');
-					button.setAttribute('disabled', 'true');
 
-					setTimeout(() => {
-						showNotification('Game invite sent!', 'success');
-						button.classList.remove('opacity-50');
-						button.removeAttribute('disabled');
-					}, 800);
+					// EN COURS POUR LES INVITATIONS
+					// alert("JE DOIS LINVITER");
+
+
+
+					let user_id_to_invite = Number(userId);
+
+					// let room_id = document.getElementById('idRoom').value;
+					try {
+						const response = await fetch('https://localhost:4430/api/invite_player_tournament/ ' + user_id_to_invite, {
+						method: 'GET',
+						credentials: 'include'
+						});
+
+						if (!response.ok)
+						{
+						throw new Error('erreur http : ' + response.status);
+						}
+
+						const result = await response.json();
+						if (result.success)
+						{
+							alert("Invitation sent successfully");
+						}
+						else
+						{
+							alert("Error when sending invitation : " + result.error);
+						}
+						// alert("resultat envoi formulaire (join room) : " + JSON.stringify(result));
+						// return (result);
+					} catch (err)
+					{
+						alert("Simple error when sending invitation");
+						// alert("erreur denvoi formulaire create room");
+					}
+
+
+
+
+					// const buttonElement = button as HTMLElement;
+					// buttonElement.innerHTML = 'INVITING...';
+					// buttonElement.classList.add('opacity-50');
+					// buttonElement.setAttribute('disabled', 'true');
+
+					// try {
+					// 	const response = await fetch(`/api/invite_friend_game/${userId}`, {
+					// 		method: 'POST',
+					// 		headers: {
+					// 			'Content-Type': 'application/json',
+					// 		},
+					// 		body: JSON.stringify({}),
+					// 		credentials: 'include',
+					// 	});
+
+					// 	if (response.ok) {
+					// 		showNotification('Game invite sent! Redirecting to room...', 'success');
+							
+					// 		// Redirect host to room page immediately
+					// 		setTimeout(() => {
+					// 			window.location.href = 'https://localhost:4430/room';
+					// 		}, 1000);
+					// 	} else {
+					// 		const error = await response.json();
+					// 		showNotification(`Error: ${error.error || 'Failed to send invite'}`, 'error');
+					// 	}
+					// } catch (err) {
+					// 	console.error('Error sending game invite:', err);
+					// 	showNotification('Failed to send game invite. Please try again.', 'error');
+					// } finally {
+					// 	buttonElement.innerHTML = 'INVITE';
+					// 	buttonElement.classList.remove('opacity-50');
+					// 	buttonElement.removeAttribute('disabled');
+					// }
+
+
+
+
 				}
 			});
 		});
@@ -247,7 +332,7 @@ class FriendsPage extends Page {
 					btn.setAttribute('disabled', 'true');
 
 					try {
-						console.log('Attempting to block user:', userId); // Debug log
+						//console.log('Attempting to block user:', userId); // Debug log
 
 						const response = await fetch(`/api/users/${userId}/block`, {
 							method: 'POST',
@@ -256,7 +341,7 @@ class FriendsPage extends Page {
 							credentials: 'include',
 						});
 
-						console.log('Block response status:', response.status); // Debug log
+						//console.log('Block response status:', response.status); // Debug log
 
 						if (response.ok) {
 							const result = await response.json();
@@ -278,7 +363,7 @@ class FriendsPage extends Page {
 							this.refreshSearchIfNeeded();
 						} else {
 							const error = await response.json();
-							console.error('Block failed with error:', error); // Debug log
+							//console.error('Block failed with error:', error); // Debug log
 							showNotification(`Error: ${error.error || 'Failed to block user'}`, 'error');
 						}
 					} catch (err) {
@@ -500,6 +585,31 @@ class FriendsPage extends Page {
                                             UNBLOCK
                                         </button>
                                     </div>`;
+							} else if (user.friendshipStatus === 'blocked_by') {
+								// User has been blocked by the other user - can't send friend request
+								cardContent = `
+                                    <div class="flex items-center space-x-4">
+                                        <a href="https://localhost:4430/profile/${user.username}">
+                                            <img src="${avatarUrl}" alt="${user.username}" 
+                                                class="w-16 h-16 object-cover rounded-lg border-2 ${user.online ? 'border-neon-cyan' : 'border-gray-500'}">
+                                        </a>
+                                        <div>
+                                            <a href="https://localhost:4430/profile/${user.username}" class="hover:underline">
+                                                <h3 class="font-cyber text-lg text-white">${user.username}</h3>
+                                            </a>
+                                            <span class="font-cyber text-xs font-bold px-2 py-1 rounded-sm ${user.online
+										? 'text-green-400 bg-green-900/20 border border-green-500/30'
+										: 'text-red-400 bg-red-900/20 border border-red-500/30'
+									}">
+                                                ${user.online ? 'ONLINE' : 'OFFLINE'}
+                                            </span>
+                                        </div>
+                                        <div class="ml-auto flex space-x-2">
+                                            <button class="p-2 bg-cyber-dark border border-red-500/50 text-red-400 text-sm rounded opacity-50" disabled>
+                                                BLOCKED
+                                            </button>
+                                        </div>
+                                    </div>`;
 							} else {
 								// Normal content for non-blocked users
 								switch (user.friendshipStatus) {
@@ -662,7 +772,18 @@ class FriendsPage extends Page {
 							this.updateUserCardButton(userCard, 'request_sent');
 						} else {
 							const error = await response.json();
-							showNotification(`Error: ${error.error || 'Failed to send friend request'}`, 'error');
+							let errorMessage = 'Failed to send friend request';
+							
+							// Handle specific error cases
+							if (error.error === 'user_blocked') {
+								errorMessage = 'Cannot send friend request - user has blocked you or you have blocked them';
+							} else if (error.error === 'friend_request_already_sent') {
+								errorMessage = 'Friend request already sent';
+							} else if (error.error === 'already_friends') {
+								errorMessage = 'You are already friends with this user';
+							}
+							
+							showNotification(`Error: ${errorMessage}`, 'error');
 							buttonElement.innerHTML = 'ADD FRIEND';
 							buttonElement.classList.remove('opacity-50');
 							buttonElement.removeAttribute('disabled');
@@ -671,6 +792,49 @@ class FriendsPage extends Page {
 						console.error('Error adding friend:', err);
 						showNotification('Failed to send friend request. Please try again.', 'error');
 						buttonElement.innerHTML = 'ADD FRIEND';
+						buttonElement.classList.remove('opacity-50');
+						buttonElement.removeAttribute('disabled');
+					}
+				}
+			});
+		});
+
+		// Remove Friend buttons
+		const removeFriendButtons = this.container.querySelectorAll('.remove-friend-btn');
+		removeFriendButtons.forEach(button => {
+			button.addEventListener('click', async () => {
+				const userId = (button as HTMLElement).dataset.userId;
+				if (userId && confirm('Are you sure you want to remove this friend?')) {
+					const buttonElement = button as HTMLElement;
+					const userCard = buttonElement.closest('[data-user-id]') as HTMLElement;
+
+					buttonElement.innerHTML = 'REMOVING...';
+					buttonElement.classList.add('opacity-50');
+					buttonElement.setAttribute('disabled', 'true');
+
+					try {
+						const response = await fetch(`/api/remove_friend/${userId}`, {
+							method: 'GET',
+							credentials: 'include',
+						});
+
+						if (response.ok) {
+							showNotification('Friend removed successfully!', 'success');
+							this.updateUserCardButton(userCard, 'none');
+							await this.fetchFriendsList();
+							this.updateContent();
+							this.refreshSearchIfNeeded();
+						} else {
+							const error = await response.json();
+							showNotification(`Error: ${error.error || 'Failed to remove friend'}`, 'error');
+							buttonElement.innerHTML = 'REMOVE FRIEND';
+							buttonElement.classList.remove('opacity-50');
+							buttonElement.removeAttribute('disabled');
+						}
+					} catch (err) {
+						console.error('Error removing friend:', err);
+						showNotification('Failed to remove friend. Please try again.', 'error');
+						buttonElement.innerHTML = 'REMOVE FRIEND';
 						buttonElement.classList.remove('opacity-50');
 						buttonElement.removeAttribute('disabled');
 					}
@@ -777,7 +941,7 @@ class FriendsPage extends Page {
 					btn.setAttribute('disabled', 'true');
 
 					try {
-						console.log('Attempting to block user:', userId); // Debug log
+						//console.log('Attempting to block user:', userId); // Debug log
 
 						const response = await fetch(`/api/users/${userId}/block`, {
 							method: 'POST',
@@ -786,13 +950,19 @@ class FriendsPage extends Page {
 							credentials: 'include',
 						});
 
-						console.log('Block response status:', response.status); // Debug log
+						//console.log('Block response status:', response.status); // Debug log
 
 						if (response.ok) {
-							const result = await response.json();
-							console.log('Block response data:', result); // Debug log
+							//const result = await response.json();
+							//console.log('Block response data:', result); // Debug log
 
 							showNotification('User blocked successfully!', 'success');
+
+							// Mettre à jour immédiatement l'interface pour montrer que l'utilisateur est bloqué
+							const userCard = btn.closest('[data-user-id]') as HTMLElement;
+							if (userCard) {
+								this.updateUserCardButton(userCard, 'blocked');
+							}
 
 							// Remove from friends list and friend requests immediately
 							this.friendsList = this.friendsList.filter(friend => friend.id !== parseInt(userId));
@@ -808,7 +978,7 @@ class FriendsPage extends Page {
 							this.refreshSearchIfNeeded();
 						} else {
 							const error = await response.json();
-							console.error('Block failed with error:', error); // Debug log
+							//console.error('Block failed with error:', error); // Debug log
 							showNotification(`Error: ${error.error || 'Failed to block user'}`, 'error');
 						}
 					} catch (err) {
@@ -914,6 +1084,33 @@ class FriendsPage extends Page {
                     data-user-id="${userCard.dataset.userId}">
                 ADD FRIEND
             </button>`;
+		} else if (newStatus === 'friends') {
+			newButtonHTML = `
+            <button class="remove-friend-btn p-2 bg-cyber-dark border border-red-500/50 hover:border-red-500 text-red-500 text-sm rounded" 
+                    data-user-id="${userCard.dataset.userId}">
+                REMOVE FRIEND
+            </button>`;
+		} else if (newStatus === 'blocked_by') {
+			// L'autre utilisateur m'a bloqué - j'affiche "BLOCKED" et je ne peux plus interagir
+			actionContainer.innerHTML = `
+                <div class="ml-auto flex space-x-2">
+                    <button class="p-2 bg-cyber-dark border border-red-500/50 text-red-400 text-sm rounded opacity-50" disabled>
+                        BLOCKED
+                    </button>
+                </div>`;
+			this.attachSearchActionListeners();
+			return;
+		} else if (newStatus === 'blocked') {
+			// J'ai bloqué cet utilisateur - j'affiche "BLOCKED" avec possibilité de débloquer
+			actionContainer.innerHTML = `
+                <div class="ml-auto flex space-x-2">
+                    <button class="unblock-user-btn p-2 bg-cyber-dark border border-yellow-500/50 hover:border-yellow-500 text-yellow-500 text-sm rounded" 
+                            data-user-id="${userCard.dataset.userId}">
+                        UNBLOCK
+                    </button>
+                </div>`;
+			this.attachSearchActionListeners();
+			return;
 		}
 
 		actionContainer.innerHTML = `
@@ -933,7 +1130,7 @@ class FriendsPage extends Page {
 
 				// Correction : certains serveurs envoient {success: false, error: ...}
 				if (data && data.success === false) {
-					console.error('WebSocket error:', data.error);
+					//console.error('WebSocket error:', data.error);
 					return;
 				}
 
@@ -943,18 +1140,34 @@ class FriendsPage extends Page {
 					this.fetchFriendRequests().then(() => {
 						this.updateContent();
 					});
-					// Ajout : met à jour le statut dans la recherche pour afficher les boutons
+					// Ajout : met à jour le statut dans la recherche pour afficher les boutons
 					this.updateSearchUserStatus(data.from, 'request_received');
 					this.refreshSearchIfNeeded(); // <-- Ajout pour forcer le refresh de la recherche
+				} else if (data.type === 'game_invite') {
+					const inviteMessage = `${data.username} invited you to play a game!`;
+					const shouldJoin = confirm(`${inviteMessage}\n\nDo you want to join the game?`);
+					
+					if (shouldJoin) {
+						// Redirect to the room page
+						window.location.href = 'https://localhost:4430/room';
+					} else {
+						showNotification('Game invite declined', 'success');
+					}
 				} else if (data.type === 'friend_request_accepted') {
 					showNotification(`${data.username} accepted your friend request!`, 'success');
-					this.updateSearchUserStatus(data.from, 'friends');
-					this.updateSearchUserStatus(data.to, 'friends');
+					// Mettre à jour immédiatement le statut dans la recherche
+					if (data.from) this.updateSearchUserStatus(data.from, 'friends');
+					if (data.to) this.updateSearchUserStatus(data.to, 'friends');
+					if (data.requester_id) this.updateSearchUserStatus(data.requester_id, 'friends');
+					if (data.accepter_id) this.updateSearchUserStatus(data.accepter_id, 'friends');
+					
 					Promise.all([
 						this.fetchFriendsList(),
 						this.fetchFriendRequests()
 					]).then(() => {
 						this.updateContent();
+						// Forcer le refresh de la recherche pour mettre à jour les boutons avec les données du serveur
+						this.refreshSearchIfNeeded();
 					});
 				} else if (data.type === 'friend_request_declined') {
 					showNotification(`${data.username} declined your friend request`, 'error');
@@ -962,12 +1175,37 @@ class FriendsPage extends Page {
 						this.updateContent();
 					});
 					this.updateSearchUserStatus(data.from, 'none');
+					this.refreshSearchIfNeeded();
 				} else if (data.type === 'friend_removed') {
 					showNotification(`${data.username} removed you from their friends list`, 'error');
 					this.fetchFriendsList().then(() => {
 						this.updateContent();
 					});
 					this.updateSearchUserStatus(data.from, 'none');
+					this.refreshSearchIfNeeded();
+				} else if (data.type === 'user_blocked') {
+					// Quand je reçois une notification que quelqu'un m'a bloqué
+					showNotification(`${data.blocker_username} has blocked you`, 'error');
+					
+					// Mettre à jour le statut de cet utilisateur dans les recherches
+					this.updateSearchUserStatus(data.blocker_id, 'blocked_by');
+					
+					// Supprimer de mes listes d'amis et demandes
+					this.friendsList = this.friendsList.filter(friend => friend.id !== data.blocker_id);
+					this.friendRequests = this.friendRequests.filter(request => 
+						(request.senderId || request.id) !== data.blocker_id
+					);
+					
+					this.updateContent();
+					this.refreshSearchIfNeeded();
+				} else if (data.type === 'user_unblocked') {
+					// Quand je reçois une notification que quelqu'un m'a débloqué
+					showNotification(`${data.unblocker_username} has unblocked you`, 'success');
+					
+					// Mettre à jour le statut de cet utilisateur dans les recherches 
+					this.updateSearchUserStatus(data.unblocker_id, 'none');
+					
+					this.refreshSearchIfNeeded();
 				}
 			};
 			ws.onopen = () => { };
@@ -977,13 +1215,13 @@ class FriendsPage extends Page {
 	}
 
 	private updateSearchUserStatus(userId: number, newStatus: string): void {
-		console.log('Updating search user status for user:', userId, 'to status:', newStatus); // Debug log
+		//console.log('Updating search user status for user:', userId, 'to status:', newStatus); // Debug log
 		const userCard = this.container.querySelector(`[data-user-id="${userId}"]`) as HTMLElement;
 		if (userCard) {
-			console.log('Found user card, updating button'); // Debug log
+			//console.log('Found user card, updating button'); // Debug log
 			this.updateUserCardButton(userCard, newStatus);
 		} else {
-			console.log('User card not found in search results'); // Debug log
+			//console.log('User card not found in search results'); // Debug log
 		}
 	}
 
@@ -1005,7 +1243,12 @@ class FriendsPage extends Page {
 	}
 
 	async render(): Promise<HTMLElement> {
-		this.container.innerHTML = '';		
+		this.container.innerHTML = '';
+		
+		// Fetch data from backend before rendering
+		await this.fetchFriendsList();
+		await this.fetchFriendRequests();
+		
 		const friendsContent = document.createElement('div');
 		friendsContent.className = 'min-h-[calc(100vh-0rem)] pt-4 relative overflow-visible flex flex-row bg-cyber-dark'; // pt-16 -> pt-4
 		friendsContent.innerHTML = `
@@ -1030,8 +1273,8 @@ class FriendsPage extends Page {
                 <button data-tab="requests" class="px-8 py-3 font-cyber text-sm tracking-wider transition-all duration-300 bg-cyber-darker border border-gray-600 text-gray-400 hover:text-neon-cyan hover:border-neon-cyan/50">
                     REQUESTS
                 </button>
-                <button data-tab="invites" class="px-8 py-3 font-cyber text-sm tracking-wider transition-all duration-300 bg-cyber-darker border border-gray-600 text-gray-400 hover:text-neon-cyan hover:border-neon-cyan/50">
-                    GAME INVITES
+                <button data-tab="invitations" class="px-8 py-3 font-cyber text-sm tracking-wider transition-all duration-300 bg-cyber-darker border border-gray-600 text-gray-400 hover:text-neon-cyan hover:border-neon-cyan/50">
+                    INVITATIONS
                 </button>
             </div>
             <!-- Content Area -->
@@ -1049,9 +1292,9 @@ class FriendsPage extends Page {
                     <div data-content="requests" class="h-full hidden">
                         ${this.renderFriendRequests()}
                     </div>
-                    <!-- Game Invites Tab -->
-                    <div data-content="invites" class="h-full hidden">
-                        ${this.renderGameInvites()}
+                    <!-- Invitations Tab -->
+                    <div data-content="invitations" class="h-full hidden">
+                        ${this.renderInvitations()}
                     </div>
                 </div>
             </div>
@@ -1064,6 +1307,9 @@ class FriendsPage extends Page {
 		await this.setupFriendNotifications(); // Initialize WebSocket for friend notifications
 		await this.setupOnlineStatusRealtime();
 		await super.setupSidebarListeners();
+
+		await this.showInvitationsWithInterval(); // raffraichit la liste des invitations
+
 		return this.container;
 	}
 	private refreshSearchIfNeeded(): void {
@@ -1111,6 +1357,339 @@ class FriendsPage extends Page {
 			this.onlineStatusWs.onerror = () => { };
 		}
 	}
+
+
+	// Affiche et actualise toute la liste des invitations vers une room
+	private async showInvitationsWithInterval()
+	{
+		const id_inter = setInterval(async () => 
+			{try {
+				const response = await fetch('https://localhost:4430/api/my_invitations', {
+				method: 'GET',
+				credentials: 'include'
+				});
+
+				if (!response.ok)
+				{
+				throw new Error('erreur http : ' + response.status);
+				}
+
+				const result = await response.json();
+
+				if (result.success)
+				{
+					// alert("invitations success from backend");
+					// alert("jai bien recu les invitations");
+					const invitations = result.tabl_invitations;
+
+					
+
+                    const invitationsDiv = this.container.querySelector('#invitationsDiv');
+					if (invitationsDiv)
+					{
+
+						// Empeche d'afficher les invitations SI je suis déja dans une room
+
+
+
+
+						(invitationsDiv as HTMLElement).textContent = "";
+
+						if (await this.already_in_room())
+						{
+							// alert("je suis déja dans une room");
+							invitationsDiv.innerHTML = "I am already in a room. I can't receive invitations.";
+						}
+						else
+						{
+
+
+							for (const invitation of invitations)
+							{
+								console.log("invitation with room id = " + invitation.room_id);
+								
+								if (invitationsDiv)
+								{
+
+									// Je crée l'élement (bouton) pour rejoindre une room
+									const lineJoin = document.createElement('td');
+									lineJoin.innerHTML = `<button data-idinvite="${invitation.room_id}" id="invite-player" class="hover:bg-gray-400 text-xl">Join room (id ${invitation.room_id})</button>`;
+									invitationsDiv.appendChild(lineJoin);
+
+									// Ancien modele
+									// const newelt = document.createElement("p");
+									// (newelt as HTMLElement).textContent = "Join room id = " + invitation.room_id;
+									// invitationsDiv.appendChild(newelt);
+
+								}
+							}
+
+							// A faire : enable_kick_button
+							await this.enable_join_button();
+
+
+
+						}
+					}
+				}
+				else
+				{
+					//alert("Error when receiving invitations : " + result.error);
+					clearInterval(id_inter);
+				}
+			} catch (err)
+			{
+					clearInterval(id_inter);
+
+				//alert("Catch error when receiving invitations : " + err);
+			}
+		}, 1000
+		);
+	}
+
+	// Permet de savoir si je suis déja dans une room (pour éviter de rejoindre deux rooms)
+	private async already_in_room()
+	{
+				try {
+				const response = await fetch('https://localhost:4430/api/already_in_room', {
+				method: 'GET',
+				credentials: 'include'
+				});
+
+				if (!response.ok)
+				{
+				throw new Error('erreur http : ' + response.status);
+				}
+				// alert("la reponse = ");
+				// alert(response);
+				const result = await response.json();
+				if (result.success == true && result.in_room)
+				{
+					return true;
+				}
+				else if (result.success == true && result.in_room == false)
+				{
+					return false;
+				}
+				else
+				{
+					return false;
+				}
+			} catch (err)
+			{
+				alert("error already_in_room");
+				return false;
+			}
+	}
+
+
+	// Associe l'évenement click a tous les boutons pour rejoindre une room (invitation)
+	private async enable_join_button()
+	{
+	const buttons = this.container.querySelectorAll('button[data-idinvite]');
+	if (!buttons)
+	{
+		return ;
+	}
+	buttons.forEach(button => {
+		button.addEventListener('click', async (event) => {
+		const target = event.currentTarget as HTMLButtonElement;
+		const id = Number(target.dataset.idinvite);
+
+		// alert("room a joindre : " + id);
+		await this.joinInviteClickEvent(id);
+		});
+	});
+	}
+
+
+
+
+
+
+
+
+
+
+
+	private async checkIfRoomExists(room_id : number)
+	{
+
+		try {
+			const response = await fetch('https://localhost:4430/api/room_exists/' + room_id, {
+			method: 'GET',
+			credentials: 'include'
+			});
+
+			if (!response.ok)
+			{
+				throw new Error('erreur http : ' + response.status);
+			}
+
+			const result = await response.json();
+			// alert("The player has been kicked successfully : " + JSON.stringify(result));
+			if(result.success == true && result.exists == true)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		} catch (err)
+		{
+			// alert("erreur denvoi room exist");
+			return false;
+		}
+
+
+	}
+	// Permet de se connecter a une room (http)
+	private async join_room_http(room_id : number)
+	{
+
+		// let room_id = document.getElementById('idRoom').value;
+		try {
+			const response = await fetch('https://localhost:4430/api/join_room/' + room_id, {
+			method: 'GET',
+			credentials: 'include'
+			});
+
+			if (!response.ok)
+			{
+			throw new Error('erreur http : ' + response.status);
+			}
+
+			const result = await response.json();
+			// alert("resultat envoi formulaire (join room) : " + JSON.stringify(result));
+			return (result);
+		} catch (err)
+		{
+			// alert("erreur denvoi formulaire create room");
+		}
+	}
+
+
+
+    private async checkIfTournamentStarted(room_id : number)
+	{
+		try {
+			const response = await fetch('https://localhost:4430/api/room_started/' + room_id, {
+			method: 'GET',
+			credentials: 'include'
+			});
+
+			if (!response.ok)
+			{
+				throw new Error('erreur http : ' + response.status);
+			}
+
+			const result = await response.json();
+			// alert("The player has been kicked successfully : " + JSON.stringify(result));
+			if(result.success == true && result.started == true)
+			{
+				return true;
+			}
+			else if (result.success == true && result.started == false)
+			{
+				return false;
+			}
+			else
+			{
+				alert("error when checking if tournament started");
+				return true;
+			}
+		} catch (err)
+		{
+			alert("error when checking if tournament started catch");
+			return true;
+		}
+	}
+
+
+
+	// Fonction appelée pour rejoindre une room
+	private async joinInviteClickEvent(roomId : number)
+	{
+		// const elt = this.container.querySelector('#buttonJoin');
+		// if (elt)
+		// {
+			// elt.addEventListener('click', async () => {
+
+			// alert("test click join");
+
+
+			// A MODIFIER par SAMI
+			// let roomId = Number((this.container.querySelector('#roomIdJoin') as HTMLInputElement).value);
+			// alert("la fonction pour joindre apres le click");
+
+			if (await this.checkIfRoomExists(roomId))
+			{
+				if (await this.checkIfTournamentStarted(roomId) == false)
+				{
+					// Je rejoins la room créée
+					const room = await this.join_room_http(roomId);
+					
+					// Lorsque j'arrive sur la page /room et que "ws_to_join" est a true alors je fais appel a la fonction connect_join_room(roomId); et je supprime cet item du localstorage
+					sessionStorage.setItem('ws_to_join', room.room_id);
+
+
+					// Je stocke le numero de la room dans un sessionStorage
+					sessionStorage.setItem('room', JSON.stringify({room_id : room.room_id, admin:false, room_name : room.room_name, user_id:room.user_id}));
+
+					// A FAIRE : supprimer l'invitation dans la base de données
+					await this.deleteInvitation(roomId);
+
+					// Redirection vers la room
+					if (room.game_type === 'pong')
+						this.router?.navigate('/room'); ////// A DECOMMENTER
+					else if (room.game_type === 'connect4')
+						this.router?.navigate('/game/connect4_online'); ////// A DECOMMENTER
+	
+					// alert("ok");
+
+				}
+				else
+				{
+					alert("la room que vous essayez de joindre a deja commencé");
+				}
+			}
+			else
+			{
+				alert("la room que vous essayez de joindre n'existe pas, vérifiez l'id");
+			}
+			// });
+		// }
+
+	}
+
+    private async deleteInvitation(room_id : number)
+    {
+        try {
+				const response = await fetch('https://localhost:4430/api/remove_invitation/' + room_id, {
+				method: 'GET',
+				credentials: 'include'
+				});
+
+				if (!response.ok)
+				{
+				    throw new Error('erreur http : ' + response.status);
+				}
+
+				const result = await response.json();
+
+				if (result.success)
+				{
+				}
+				else
+				{
+					alert("erreur lors de la suppression de l'invitation pour une room : " + result.error);
+				}
+			} catch (err)
+			{
+				alert("erreur lors de la suppression des invitations");
+			}
+    }
 }
 
 export default FriendsPage;

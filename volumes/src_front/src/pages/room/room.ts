@@ -3,9 +3,6 @@ import { Router } from '../../../router/Router';
 
 
 class RoomPage extends Page {
-    static TextObject = {
-    underConstruction: 'PAGE UNDER CONSTRUCTION',
-    };
 
     constructor(id: string, router?: Router) {
         super(id, router);
@@ -13,298 +10,236 @@ class RoomPage extends Page {
     
     async render(): Promise<HTMLElement> {
         this.container.innerHTML = '';
-		await super.setupHeaderListeners();
-        const dashboardContent = document.createElement('div');
-        dashboardContent.className = 'min-h-screen pt-16 relative overflow-hidden flex flex-row bg-cyber-dark';
-        dashboardContent.innerHTML = `
-    
-      <!-- Sidebar -->
-      
-      <!-- Main Content -->
-      <main class="flex-1 flex flex-col">
-
-<div id="rootTEST"><header class="w-full bg-navy-dark py-4 px-8 fixed top-0 left-0 right-0 z-50">
-      <div class="max-w-7xl mx-auto flex items-center justify-between">
-        <!-- Logo on the left -->
-        <div class="flex-shrink-0">
-        </div>
+        await super.setupHeaderListeners();
         
-        <!-- Navigation links on the right -->
-        <nav class="flex items-center space-x-8">
-          <a href="/" data-route="/" class="header-logo text-neon-pink hover:text-neon-cyan transition-colors font-tech tracking-wider uppercase">FT_TRANSCENDENCE</a>
-          <a href="/dashboard" data-route="/dashboard" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">Game</a>
-          <a href="/profile" data-route="/profile" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">Profile</a>
-          <a href="/login" data-route="/login" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">Login</a>
-          <a href="/login" data-route="/login" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">TEST</a>
-          <a href="/room" data-route="/room" class="nav-link text-white hover:text-neon-cyan transition-colors font-tech text-sm tracking-wider uppercase">ROOM</a>
-        </nav>
-      </div>
-    </header><div id="room-page"><div class="min-h-screen pt-16 bg-cyber-dark relative overflow-hidden"><div class="absolute top-8 left-8 w-16 h-16 border-l-2 border-t-2 border-neon-pink opacity-50"></div><div class="absolute top-8 right-8 w-16 h-16 border-r-2 border-t-2 border-neon-cyan opacity-50"></div><div class="absolute bottom-8 left-8 w-16 h-16 border-l-2 border-b-2 border-neon-cyan opacity-50"></div><div class="absolute bottom-8 right-8 w-16 h-16 border-r-2 border-b-2 border-neon-pink opacity-50"></div>
-    
-    
-    
-    
-    <div id="mainContainer" class="container mx-auto items-center justify-center min-h-[calc(100vh-4rem)] px-4">
-
-
-      <!-- Mon ajout commence ici -->
-
-
-	  <div style="display:none;" id="messageOut" class="text-center text-white text-3xl p-4"></div>
-
-
-
-      <div id="room_in" style="display:none;" class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border border-neon-pink/30 shadow-lg shadow-neon-pink/10 text-center">
-
-        <p class="text-3xl" id="nameRoomNew">Nom de la room (default)</p>
-        <p class="text-lg" id="idRoomNew">Room id : 123 (default)</p>
-
-        <br>
-
-        <div>
-        <input id="usernameInviteText" type="text" class="text-black" placeholder="User ID"> <button id="buttonInvite" class="bg-slate-500 text-white">Invite</button>
-        </div>
-
-        <div class="m-4">
-
-          <table class="table-auto border-collapse border border-gray-300 w-full text-left">
-            <thead>
-            <tr class="bg-gray-800">
-              <th class="border border-gray-300 px-4 py-2">Username</th>
-              <th class="text-center"></th>
-            </tr>
-            </thead>
-            <tbody id="tablePlayersRoom">
-            <tr class="bg-gray-800">
-              <td class="border border-gray-300 px-4 py-2"> default 1</td>
-              <td class="text-center"><button class="hover:bg-gray-400">X</button></td>
-            </tr>
-            <tr class="bg-gray-800">
-              <td class="border border-gray-300 px-4 py-2">default 2</td>
-              <td class="text-center"><button class="hover:bg-gray-400">X</button></td>
-            </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="m-4">
-          <button id="buttonStart" style="display:none;" class="bg-gray-400 text-black px-4 py-2 rounded text-3xl">START</button>
-        </div>
-
-        <div class="m-4">
-          <button id="buttonDestroy" style="display:none;" class="bg-red-600 text-white text-xs px-4 py-2 rounded">DESTROY ROOM</button>
-        </div>
-
-        <div class="m-4">
-          <button id="buttonQuitRoom" class="bg-red-600 text-white text-xs px-4 py-2 rounded">QUIT THE ROOM</button>
-        </div>
-
-      </div>
-
-
-
-      <div id="room_out" style="display:none;" class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border border-neon-pink/30 shadow-lg shadow-neon-pink/10 text-center">
-
-        <div>
-        <p class="text-3xl">Join a room</p>
-          <input type="text" id="roomIdJoin" class="text-black" placeholder="Room id (ex : 123)">
-          <br><br>
-                    <button id="buttonJoin" class="bg-gray-400 text-black px-4 py-2 rounded text-xl">JOIN</button>
-        </div>
-
-
-        <br>
-
-        <div>
-        <p class="text-3xl">Create a room</p>
-          <input id="roomNameCreate" type="text" class="text-black" placeholder="Room name">           <br><br>
-              <button id="buttonCreate" class="bg-gray-400 text-black px-4 py-2 rounded text-xl">CREATE</button>
-        </div>
-
-
-
-      </div>
-
-
-
-
-
-      <div id="room_finished" style="display:none;" class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border border-neon-pink/30 shadow-lg shadow-neon-pink/10 text-center">
-
-        <div>
-
-			<p class="text-3xl" id="winnerName">The winner is : test (default)</p>
-
-
-        </div>
-
-
-        <br>
-
-        <div>
-                    <button id="buttonFinish" class="bg-gray-400 text-black px-4 py-2 rounded text-xl">QUIT THE ROOM</button>
-        </div>
-
-
-
-      </div>
-
-
-
-
-      <div id="room_forbidden" style="display:none;" class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border border-neon-pink/30 shadow-lg shadow-neon-pink/10 text-center">
-
-        <div>
-
-			<p class="text-3xl">You can't access the room page. Only one page allowed.</p>
-
-
-        </div>
-
-
-        <br>
-
-
-
-      </div>
-
-
-
-
-
-	        <div id="room_started" style="display:block;" class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border border-neon-pink/30 shadow-lg shadow-neon-pink/10 text-center">
-
-        <p class="text-3xl" id="nameRoomNewStarted">Nom de la room (default)</p>
-        <p class="text-lg" id="idRoomNewStarted">Room id : 123 (default)</p>
-
-        <br>
-
-        <div>
-                  <p class="text-2xl" id="roundRoomNewStarted">Round : 1 (default : a finir)</p>
-        </div>
-
-        <div>
-                  <p class="text-xl" id="lastMatchResult"></p>
-        </div>
-
-        <div class="m-4">
-          <table class="table-auto border-collapse border border-gray-300 w-full text-left">
-            <thead>
-            <tr class="bg-gray-800">
-              <th class="border border-gray-300 px-4 py-2">Match id</th>
-              <th class="border border-gray-300 px-4 py-2">First player</th>
-              <th class="border border-gray-300 px-4 py-2">Second player</th>
-              <!-- <th class="border border-gray-300 px-4 py-2">Finished</th> -->
-            </tr>
-            </thead>
-            <tbody id="tablePlayersRoomStarted">
-            </tbody>
-          </table>
-        </div>
-
-			<div id ="joinMatchDiv">
-                  <a href="/login" data-route="/login" class="bg-gray-400 text-black px-4 py-2 rounded text-xl">Join my 1v1 match</a>
-                  <p class=" text-white px-4 py-2 rounded text-xl">Waiting for the next match...</p>
-			</div>
-
-
-      </div> 
-
-
-
-
-
-      
-
-</div></div></div></div>
-
-      </main>
-    `;
-
-    this.container.appendChild(dashboardContent);
-
-
-	// POur test : pour empecher l'affichage si deux onglets
-		if (await this.canShowRoomPage())
-		{
-			alert("JE PEUX AFFICHER !");
-				// Test : pour la connexion WS lorque le joueur rejoint une invitation depuis le chat
-			if (sessionStorage.getItem('ws_to_join'))
-			{
-				await this.connect_join_room(Number(sessionStorage.getItem('ws_to_join')));
-				sessionStorage.removeItem('ws_to_join');	
-			}
-
-				// A FAIRE :
-				// verifier si localstorage contient des données et que le tournoi n'a pas commencé (via fetch)
-				// Si oui : on refait une connexion WS et on réinsert via http api dans la base de données
-
-				// Si le localstorage contient des données et que la partie a commencée (via fetch) MAIS que je suis pas dans la liste des joueurs (rooms_players)
-				// Si oui : je vide completement le localstorage
-			await this.reconnectToRoom();
-
-			// A FAIRE : verifire si dans mon localstorage si je suis dans une room
-			// Si la room s'est terminée : je retourne a la room (j'affiche via alert : le tournoi auquel vous souhaitez accéder s'est terminé ou a été interrompu)
-			await this.checkIfTournamentFinishedWithError();
-
-			// Remet a zero la déconnexion (on oublie tout et on considère qu'il n'y a jamais eu de deconnexion)
-			await this.removeFromSetConnectionClosed();
-
-			// Affiche la room ou le menu
-			await this.showRoomPageWithLocalStorage();
-
-		}
-		else
-		{
-			// Je suis déja dans une room dans un onglet
-			alert("Je ne peux rien afficher car je suis déja dans une room dans un onglet");
-			await this.changeRoomPage("forbidden");
-		}
-
-
-	// // Test : pour la connexion WS lorque le joueur rejoint une invitation depuis le chat
-	// if (sessionStorage.getItem('ws_to_join'))
-	// {
-	// 	await this.connect_join_room(Number(sessionStorage.getItem('ws_to_join')));
-	// 	sessionStorage.removeItem('ws_to_join');	
-	// }
-
-	// 	// A FAIRE :
-	// 	// verifier si localstorage contient des données et que le tournoi n'a pas commencé (via fetch)
-	// 	// Si oui : on refait une connexion WS et on réinsert via http api dans la base de données
-
-	// 	// Si le localstorage contient des données et que la partie a commencée (via fetch) MAIS que je suis pas dans la liste des joueurs (rooms_players)
-	// 	// Si oui : je vide completement le localstorage
-	// await this.reconnectToRoom();
-
-	// // A FAIRE : verifire si dans mon localstorage si je suis dans une room
-	// // Si la room s'est terminée : je retourne a la room (j'affiche via alert : le tournoi auquel vous souhaitez accéder s'est terminé ou a été interrompu)
-	// await this.checkIfTournamentFinishedWithError();
-
-	// // Remet a zero la déconnexion (on oublie tout et on considère qu'il n'y a jamais eu de deconnexion)
-	// await this.removeFromSetConnectionClosed();
-
-	// // Affiche la room ou le menu
-	// await this.showRoomPageWithLocalStorage();
-
-	// A FAIRE AU LIEU DE LA FONCTION SHOWROOM :
-	// socket.addEventListener('close', << faire attention a ca
-	// Au lieu de checker le localstorage : je fais une requete feth pour savoir si je suis dans une room et si le tournoi a commencer
-
-	// Permet d'activer les évenements de click
-	await this.joinClickEvent();
-	await this.createClickEvent();
-	await this.startClickEvent();
-	await this.destroyClickEvent();
-	await this.quitFinishClickEvent();
-	await this.quitRoomEvent();
-	await this.inviteClickEvent();
-
-    await super.setupSidebarListeners(); // Rendu asynchrone pour attendre les listeners
-
-	// this.tester();
-    return this.container;
-  }
+        const roomContent = document.createElement('div');
+        roomContent.className = 'min-h-screen pt-16 relative overflow-hidden flex flex-row bg-cyber-dark';
+        
+        roomContent.innerHTML = `
+            ${await super.createSidebar()}
+            
+            <!-- Main Content -->
+            <main class="flex-1 flex flex-col relative">
+                <!-- Background Effects -->
+                <div class="absolute inset-0 z-0">
+                    <div class="absolute inset-0 bg-grid-overlay opacity-20"></div>
+                    <div class="absolute inset-0 scanlines"></div>
+                    <!-- Cyber borders -->
+                    <div class="absolute top-8 left-8 w-16 h-16 border-l-2 border-t-2 border-neon-pink opacity-50"></div>
+                    <div class="absolute top-8 right-8 w-16 h-16 border-r-2 border-t-2 border-neon-cyan opacity-50"></div>
+                    <div class="absolute bottom-8 left-8 w-16 h-16 border-l-2 border-b-2 border-neon-cyan opacity-50"></div>
+                    <div class="absolute bottom-8 right-8 w-16 h-16 border-r-2 border-b-2 border-neon-pink opacity-50"></div>
+                </div>
+                
+                <!-- Header Section -->
+                <div class="relative z-10 text-center pt-8 pb-4">
+                    <h1 class="text-4xl font-cyber text-neon-pink animate-glow-pulse mb-4 tracking-wider">TOURNAMENT ROOMS</h1>
+                    <div class="h-1 w-32 bg-gradient-to-r from-neon-pink to-neon-cyan mx-auto mb-4"></div>
+                    <p class="text-neon-cyan font-cyber text-xl">COMPETE WITH PLAYERS WORLDWIDE</p>
+                </div>
+
+                <!-- Room Management Container -->
+                <div class="relative z-10 flex-1 px-8 pb-8">
+                    <div id="messageOut" class="text-center text-white text-3xl p-4 hidden"></div>
+
+                    <!-- Room In View -->
+                    <div id="room_in" class="hidden max-w-4xl mx-auto">
+                        <div class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border-2 border-neon-pink/40 shadow-lg shadow-neon-pink/20">
+                            <div class="text-center mb-6">
+                                <h2 id="nameRoomNew" class="text-3xl font-cyber text-neon-pink mb-2">Room Name (default)</h2>
+                                <p id="idRoomNew" class="text-lg text-neon-cyan font-tech">Room ID: 123 (default)</p>
+                            </div>
+
+                            <!-- Invite Section -->
+                            <div class="mb-6 p-4 bg-cyber-dark/50 border border-neon-cyan/30 rounded">
+                                <h3 class="text-neon-cyan font-cyber mb-3">INVITE PLAYERS</h3>
+                                <div class="flex gap-3">
+                                    <input id="usernameInviteText" type="text" class="flex-1 bg-cyber-dark border-2 border-neon-pink/30 text-white px-4 py-2 rounded font-tech" placeholder="Enter User ID">
+                                    <button id="buttonInvite" class="bg-gradient-to-r from-neon-pink to-neon-cyan text-white font-cyber px-6 py-2 rounded hover:shadow-lg hover:shadow-neon-pink/50 transition-all duration-300">INVITE</button>
+                                </div>
+                            </div>
+
+                            <!-- Players Table -->
+                            <div class="mb-6">
+                                <h3 class="text-neon-cyan font-cyber mb-4">CURRENT PLAYERS</h3>
+                                <div class="overflow-hidden rounded-lg border border-neon-cyan/30">
+                                    <table class="w-full bg-cyber-dark">
+                                        <thead>
+                                            <tr class="bg-cyber-darker border-b border-neon-cyan/20">
+                                                <th class="px-6 py-3 text-left text-neon-cyan font-cyber">Username</th>
+                                                <th class="px-6 py-3 text-center text-neon-cyan font-cyber">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tablePlayersRoom">
+                                            <tr class="border-b border-cyber-light/10">
+                                                <td class="px-6 py-3 text-white font-tech">default 1</td>
+                                                <td class="px-6 py-3 text-center">
+                                                    <button class="text-red-400 hover:text-red-300 hover:bg-red-500/20 px-2 py-1 rounded transition-colors">✕</button>
+                                                </td>
+                                            </tr>
+                                            <tr class="border-b border-cyber-light/10">
+                                                <td class="px-6 py-3 text-white font-tech">default 2</td>
+                                                <td class="px-6 py-3 text-center">
+                                                    <button class="text-red-400 hover:text-red-300 hover:bg-red-500/20 px-2 py-1 rounded transition-colors">✕</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex flex-wrap gap-4 justify-center">
+                                <button id="buttonStart" class="hidden bg-gradient-to-r from-neon-cyan to-neon-pink text-white font-cyber px-8 py-3 rounded-lg text-xl hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300">START TOURNAMENT</button>
+                                <button id="buttonDestroy" class="hidden bg-gradient-to-r from-red-500 to-red-600 text-white font-cyber px-6 py-2 rounded hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300">DESTROY ROOM</button>
+                                <button id="buttonQuitRoom" class="bg-cyber-dark border-2 border-red-500/50 text-red-400 font-cyber px-6 py-2 rounded hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300">QUIT ROOM</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Out View -->
+                    <div id="room_out" class="hidden max-w-4xl mx-auto">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Join Room Section -->
+                            <div class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border-2 border-neon-cyan/40 shadow-lg shadow-neon-cyan/20">
+                                <h2 class="text-3xl font-cyber text-neon-cyan mb-6 text-center">JOIN ROOM</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-neon-cyan font-tech text-sm mb-2">Room ID</label>
+                                        <input type="text" id="roomIdJoin" class="w-full bg-cyber-dark border-2 border-neon-cyan/30 text-white px-4 py-3 rounded font-tech" placeholder="Enter Room ID (e.g., 123)">
+                                    </div>
+                                    <button id="buttonJoin" class="w-full bg-gradient-to-r from-neon-cyan to-neon-pink text-white font-cyber px-6 py-3 rounded-lg text-xl hover:shadow-lg hover:shadow-neon-cyan/50 transition-all duration-300">JOIN ROOM</button>
+                                </div>
+                            </div>
+
+                            <!-- Create Room Section -->
+                            <div class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border-2 border-neon-pink/40 shadow-lg shadow-neon-pink/20">
+                                <h2 class="text-3xl font-cyber text-neon-pink mb-6 text-center">CREATE ROOM</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-neon-pink font-tech text-sm mb-2">Room Name</label>
+                                        <input id="roomNameCreate" type="text" class="w-full bg-cyber-dark border-2 border-neon-pink/30 text-white px-4 py-3 rounded font-tech" placeholder="Enter Room Name">
+                                    </div>
+                                    <button id="buttonCreate" class="w-full bg-gradient-to-r from-neon-pink to-neon-cyan text-white font-cyber px-6 py-3 rounded-lg text-xl hover:shadow-lg hover:shadow-neon-pink/50 transition-all duration-300">CREATE ROOM</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Finished View -->
+                    <div id="room_finished" class="hidden max-w-2xl mx-auto">
+                        <div class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border-2 border-yellow-500/40 shadow-lg shadow-yellow-500/20 text-center">
+                            <div class="mb-8">
+                                <div class="text-4xl font-cyber text-yellow-400 mb-4">🏆 TOURNAMENT COMPLETE 🏆</div>
+                                <p id="winnerName" class="text-3xl font-cyber text-neon-pink mb-2">The winner is: test (default)</p>
+                                <div class="h-1 w-24 bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto mb-6"></div>
+                            </div>
+                            
+                            <!-- Game Over Action Buttons -->
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                <button id="buttonFinish" class="bg-cyber-dark border-2 from-neon-cyan to-neon-pink text-white font-cyber px-8 py-3 rounded-lg text-xl hover:border-yellow-500 hover:shadow-lg hover:shadow-yellow-500/20 transition-all duration-300">
+                                    QUIT ROOM
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Forbidden View -->
+                    <div id="room_forbidden" class="hidden max-w-2xl mx-auto">
+                        <div class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border-2 border-red-500/40 shadow-lg shadow-red-500/20 text-center">
+                            <h2 class="text-3xl font-cyber text-red-400 mb-4">ACCESS DENIED</h2>
+                            <p class="text-xl text-white mb-6">You can't access the room page. Only one page allowed.</p>
+                        </div>
+                    </div>
+
+                    <!-- Room Started View -->
+                    <div id="room_started" class="max-w-5xl mx-auto">
+                        <div class="bg-cyber-darker/90 backdrop-blur-md p-8 rounded-lg border-2 border-neon-pink/40 shadow-lg shadow-neon-pink/20">
+                            <div class="text-center mb-6">
+                                <h2 id="nameRoomNewStarted" class="text-3xl font-cyber text-neon-pink mb-2">Room Name (default)</h2>
+                                <p id="idRoomNewStarted" class="text-lg text-neon-cyan font-tech mb-2">Room ID: 123 (default)</p>
+                                <p id="roundRoomNewStarted" class="text-2xl text-yellow-400 font-cyber">Round: 1 (default)</p>
+                                <p id="lastMatchResult" class="text-xl text-gray-300 font-tech mt-2"></p>
+                            </div>
+
+                            <!-- Matches Table -->
+                            <div class="mb-6">
+                                <h3 class="text-neon-cyan font-cyber mb-4 text-center">CURRENT MATCHES</h3>
+                                <div class="overflow-hidden rounded-lg border border-neon-cyan/30">
+                                    <table class="w-full bg-cyber-dark">
+                                        <thead>
+                                            <tr class="bg-cyber-darker border-b border-neon-cyan/20">
+                                                <th class="px-6 py-3 text-center text-neon-cyan font-cyber">Match ID</th>
+                                                <th class="px-6 py-3 text-center text-neon-cyan font-cyber">First Player</th>
+                                                <th class="px-6 py-3 text-center text-neon-cyan font-cyber">Second Player</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tablePlayersRoomStarted">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Match Actions -->
+                            <div id="joinMatchDiv" class="text-center space-y-4">
+                                <a href="/login" data-route="/login" class="inline-block bg-gradient-to-r from-neon-cyan to-neon-pink text-white font-cyber px-8 py-3 rounded-lg text-xl hover:shadow-lg hover:shadow-neon-pink/50 transition-all duration-300">JOIN MY 1V1 MATCH</a>
+                                <p class="text-white font-tech text-xl">Waiting for the next match...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        `;
+
+        this.container.appendChild(roomContent);
+
+        // Preserve existing room logic
+        // Pour test : pour empecher l'affichage si deux onglets
+        if (await this.canShowRoomPage()) {
+            // Test : pour la connexion WS lorque le joueur rejoint une invitation depuis le chat
+            if (sessionStorage.getItem('ws_to_join')) {
+                await this.connect_join_room(Number(sessionStorage.getItem('ws_to_join')));
+                sessionStorage.removeItem('ws_to_join');	
+            }
+
+            // A FAIRE :
+            // verifier si localstorage contient des données et que le tournoi n'a pas commencé (via fetch)
+            // Si oui : on refait une connexion WS et on réinsert via http api dans la base de données
+
+            // Si le localstorage contient des données et que la partie a commencée (via fetch) MAIS que je suis pas dans la liste des joueurs (rooms_players)
+            // Si oui : je vide completement le localstorage
+            await this.reconnectToRoom();
+
+            // A FAIRE : verifire si dans mon localstorage si je suis dans une room
+            // Si la room s'est terminée : je retourne a la room (j'affiche via alert : le tournoi auquel vous souhaitez accéder s'est terminé ou a été interrompu)
+            await this.checkIfTournamentFinishedWithError();
+
+            // Remet a zero la déconnexion (on oublie tout et on considère qu'il n'y a jamais eu de deconnexion)
+            await this.removeFromSetConnectionClosed();
+
+            // Affiche la room ou le menu
+            await this.showRoomPageWithLocalStorage();
+        } else {
+            // Je suis déja dans une room dans un onglet
+            alert("Je ne peux rien afficher car je suis déja dans une room dans un onglet");
+            await this.changeRoomPage("forbidden");
+        }
+
+        // Permet d'activer les évenements de click
+        await this.joinClickEvent();
+        await this.createClickEvent();
+        await this.startClickEvent();
+        await this.destroyClickEvent();
+        await this.quitFinishClickEvent();
+        await this.playAgainClickEvent();
+        await this.mainMenuClickEvent();
+        await this.quitRoomEvent();
+        await this.inviteClickEvent();
+
+        await super.setupSidebarListeners(); // Rendu asynchrone pour attendre les listeners
+
+        return this.container;
+    }
 
 
   private async canShowRoomPage()
@@ -324,7 +259,7 @@ class RoomPage extends Page {
 				const result = await response.json();
 				if (result.success == true && result.in_room)
 				{
-					alert("deja dans une room, je dois aussi vérifier si jai un sessionstorage");
+					// alert("deja dans une room, je dois aussi vérifier si jai un sessionstorage");
 					if (!sessionStorage.getItem('room'))
 					{
 						alert("je n'ai pas de sessionStorage, je nai pas le droit dacceder a cette page");
@@ -338,7 +273,7 @@ class RoomPage extends Page {
 				}
 				else if (result.success == true && result.in_room == false)
 				{
-					alert("je ne suis pas dans une room");
+					// alert("je ne suis pas dans une room");
 
 				}
 				else
@@ -389,7 +324,7 @@ class RoomPage extends Page {
 				const result = await response.json();
 				if (result.success)
 				{
-					alert("invitation bien envoyee au joueur");
+					alert("Invitation has been sent to user with id : " + user_id_to_invite);
 				}
 				else
 				{
@@ -409,130 +344,6 @@ class RoomPage extends Page {
 		}
 	}
 
-	// private async joinInviteClickEvent()
-	// {
-	// 	const elt = this.container.querySelector('#textJoinInvite');
-	// 	if (elt)
-	// 	{
-	// 		elt.addEventListener('click', async () => {
-
-	// 		// alert("test click join");
-
-
-	// 		// A MODIFIER par SAMI
-	// 		let roomId = Number((this.container.querySelector('#roomIdJoin') as HTMLInputElement).value);
-
-	// 		if (await this.checkIfRoomExists(roomId))
-	// 		{
-	// 			// Je rejoins la room créée
-	// 			const room = await this.join_room_http(roomId);
-	// 			await this.connect_join_room(roomId);
-
-	// 			// Je stocke le numero de la room dans un localstorage
-	// 			sessionStorage.setItem('room', JSON.stringify({room_id : room.room_id, admin:false, room_name : room.room_name, user_id:room.user_id}));
-
-	// 			// Je change le contenu de la roomPage
-	// 			// await this.changeRoomPageInformations();
-	// 			// await this.changeRoomPage("in");
-
-	// 			// A FAIRE : supprimer l'invitation dans la base de données
-
-	// 			// Redirection vers la room
-	// 			this.router?.navigate('/room');
-	// 		}
-	// 		else
-	// 		{
-	// 			alert("la room que vous essayez de joindre n'existe pas, vérifiez l'id");
-	// 		}
-	// 		});
-	// 	}
-
-	// }
-
-	// private async showInvitationsWithInterval()
-	// {
-	// 	setInterval(async () => 
-	// 		{try {
-	// 			const response = await fetch('https://localhost:4430/api/my_invitations', {
-	// 			method: 'GET',
-	// 			credentials: 'include'
-	// 			});
-
-	// 			if (!response.ok)
-	// 			{
-	// 			throw new Error('erreur http : ' + response.status);
-	// 			}
-
-	// 			const result = await response.json();
-
-	// 			if (result.success)
-	// 			{
-	// 				alert("jai bien recu les invitations");
-	// 				const invitations = result.tabl_invitations;
-	// 				for (const invitation of invitations)
-	// 				{
-	// 					console.log("invitation with room id = " + invitation.room_id);
-	// 				}
-	// 			}
-	// 			else
-	// 			{
-	// 				alert("erreur lors de la reception des invitations : " + result.error);
-	// 			}
-	// 		} catch (err)
-	// 		{
-	// 			alert("erreur de recuperation des invitations");
-	// 		}
-	// 	}, 1000
-	// 	);
-	// }
- 
-
-//   private async amIAdmin()
-//   {
-// 			const localstorage_room = sessionStorage.getItem('room');
-
-// 		if (localstorage_room !== null)
-// 		{
-
-// 			const localvar = JSON.parse(localstorage_room);
-// 			const room_id = localvar.room_id;
-// 			// alert("la room id = " + room_id);
-
-// 				// On vérifie si le tournoi n'a pas commencé
-// 			try {
-// 				const response = await fetch('https://localhost:4430/api/im_admin/' + room_id, {
-// 				method: 'GET',
-// 				credentials: 'include'
-// 				});
-
-// 				if (!response.ok)
-// 				{
-// 					throw new Error('erreur http : ' + response.status);
-// 				}
-// 				// alert("eee");
-
-// 				const result = await response.json();
-// 				// alert("message recu : " + result);
-// 				if (result.success == true && result.admin == true)
-// 				{
-// 					return true;
-// 				}
-// 				else
-// 				{
-// 					return false;
-// 				}
-// 				// alert("fin fct");
-// 			} catch (err)
-// 			{
-// 				alert("erreur denvoi amIAdmin()");
-// 				alert(err);
-// 			}
-
-
-
-// 		}
-
-//   }
 
   private async showInButtonsIfAdmin()
   {
@@ -628,61 +439,6 @@ class RoomPage extends Page {
 
   }
 
-
-
-//   // Vérifie si le tournoi dans lequel je suis est fini (normalement ou via deconnexion d'autres joueurs)
-//   private async checkIfTournamentFinished()
-//   {
-// 			const localstorage_room = sessionStorage.getItem('room');
-
-// 		if (localstorage_room !== null)
-// 		{
-
-// 			const localvar = JSON.parse(localstorage_room);
-// 			let room_id = localvar.room_id;
-
-
-// 			alert("on va verifier si le tournoi est fini");
-
-// 			// On vérifie si le tournoi n'a pas commencé
-// 			try {
-// 				const response = await fetch('https://localhost:4430/api/tournament_finished/' + room_id, {
-// 				method: 'GET',
-// 				credentials: 'include'
-// 				});
-
-// 				if (!response.ok)
-// 				{
-// 				throw new Error('erreur http : ' + response.status);
-// 				}
-
-// 				const result = await response.json();
-// 				alert(JSON.stringify(result));
-// 				if (result.success == true && result.finished == true)
-// 				{
-// 					alert("Le match auquel vous souhaitez acceder a été terminé (normalement ou suite a la deconnexion d'un joueur)");
-// 					await this.removeLocalStorageTournament();
-
-
-// 					// return (true);
-// 				} else if (result.success == true && result.finished == false)
-// 				{
-// 					// return (false);
-// 				}
-// 				else
-// 				{
-// 					throw new Error("not good result json");
-// 				}
-// 			} catch (err)
-// 			{
-// 				alert("erreur denvoi checkIfTournamentFinished()");
-// 			}
-
-
-
-// 		}
-
-//   }
 
   // Vérifie si le tournoi dans lequel je suis est fini (normalement ou via deconnexion d'autres joueurs)
   private async checkIfTournamentFinishedWithError()
@@ -917,6 +673,17 @@ class RoomPage extends Page {
   	// Change la visibilite de la room
 	private async changeRoomPage(in_or_out : string)
 	{
+		const room_in = this.container.querySelector('#room_in');
+		const room_started = this.container.querySelector('#room_started');
+		const room_out = this.container.querySelector('#room_out');
+		const room_finished = this.container.querySelector('#room_finished');
+		const room_forbidden = this.container.querySelector('#room_forbidden');
+
+		if (!(room_in && room_started && room_out && room_finished && room_forbidden))
+		{
+			return ;
+		}
+
 		if (in_or_out === "in")
 		{
 			await this.changeRoomPageInformations();
@@ -924,6 +691,7 @@ class RoomPage extends Page {
 			(this.container.querySelector('#room_started') as HTMLElement).style.display = "none";
 			(this.container.querySelector('#room_out') as HTMLElement).style.display = "none";
 				(this.container.querySelector('#room_finished') as HTMLElement).style.display = "none";	
+				(this.container.querySelector('#room_forbidden') as HTMLElement).style.display = "none";	
 		}
 		else if (in_or_out == "out")
 		{
@@ -945,20 +713,12 @@ class RoomPage extends Page {
 		}
 		else if (in_or_out == "finished")
 		{
-			// A FAIRE :
-			// if (sessionStorage.getItem("tournament_finished") == "true")
-			// {
-			alert("je vais afficher le finished");
 				await this.changeRoomPageInformationsFinished();
 				(this.container.querySelector('#room_in') as HTMLElement).style.display = "none";
 				(this.container.querySelector('#room_out') as HTMLElement).style.display = "none";
 				(this.container.querySelector('#room_started') as HTMLElement).style.display = "none";	
 				(this.container.querySelector('#room_forbidden') as HTMLElement).style.display = "none";	
 				(this.container.querySelector('#room_finished') as HTMLElement).style.display = "block";
-							// await this.removeLocalStorageTournament();
-
-			// }
-
 		}
 		else if (in_or_out == "forbidden")
 		{
@@ -1007,7 +767,10 @@ class RoomPage extends Page {
 				if (result.success == true)
 				{
 					const message_to_show = "The winner is : " + result.winner_username;
-					(this.container.querySelector('#winnerName') as HTMLElement).textContent = message_to_show;
+					if (this.container.querySelector('#winnerName'))
+					{
+						(this.container.querySelector('#winnerName') as HTMLElement).textContent = message_to_show;
+					}
 
 					// return true;
 				}
@@ -1021,28 +784,6 @@ class RoomPage extends Page {
 				// alert("erreur denvoi changeRoomPageInformationsFinished()");
 				return false;
 			}
-
-
-
-			// // let room_id = localvar.room_id;
-			// try {
-			// 	// const response = await fetch('https://localhost:4430/api/rooms_players/' + room_id, {
-			// 	// 	method: 'GET',
-			// 	// 	credentials: 'include'
-			// 	// });
-			// 	// if (!response.ok)
-			// 	// {
-			// 	// 	throw new Error('erreur http : ' + response.status);
-			// 	// }
-			// 	// const result = await response.json();
-
-			// 	(this.container.querySelector('#winnerName') as HTMLElement).textContent = "The winner is : WINNER_NAME";
-
-
-			// } catch (err)
-			// {
-			// alert("erreur acces fin tournoi");
-			// }
 		}
 	}
 
@@ -1060,8 +801,14 @@ class RoomPage extends Page {
 
 			const localvar = JSON.parse(localstorage_room);
 
-			(this.container.querySelector('#nameRoomNew') as HTMLElement).textContent = (localvar.room_name);
-			(this.container.querySelector('#idRoomNew') as HTMLElement).textContent = ("ID : " + localvar.room_id);
+
+			const nameRoomNew = this.container.querySelector('#nameRoomNew');
+			const idRoomNew = this.container.querySelector('#idRoomNew');
+			if (nameRoomNew && idRoomNew)
+			{
+				(this.container.querySelector('#nameRoomNew') as HTMLElement).textContent = (localvar.room_name);
+				(this.container.querySelector('#idRoomNew') as HTMLElement).textContent = ("ID : " + localvar.room_id);
+			}
 
 
 			let room_id = localvar.room_id;
@@ -1086,6 +833,12 @@ class RoomPage extends Page {
 				return ;
 			}
 
+			const tablePlayersRoom = this.container.querySelector('#tablePlayersRoom');
+			if (!tablePlayersRoom)
+			{
+				// alert("aucune tablePlayersRoom trouvée");
+				return ;
+			}
 			(this.container.querySelector('#tablePlayersRoom') as HTMLElement).innerHTML = '';
 			let i = 0;
 			for (const player of players)
@@ -1101,15 +854,6 @@ class RoomPage extends Page {
 				tdTableRemoveUser.innerHTML = `<button data-id="${player.user_id}" id="reject_player" class="hover:bg-gray-400">X</button>`;
 				const lineTable = document.createElement("tr");
 				lineTable.appendChild(tdTableUsername);
-
-				// if (await this.amIAdmin() && i !=)
-				// {
-				// // if (localvar.admin && i != 0)
-				// // {
-				// // lineTable.appendChild(tdTableRemoveUser);
-				// // }
-
-				// }
 
 				if (localvar.admin && i != 0)
 				{
@@ -1128,8 +872,13 @@ class RoomPage extends Page {
 		}
 		else
 		{
-			(this.container.querySelector('#nameRoomNew') as HTMLElement).textContent = ("NULL");
-			(this.container.querySelector('#idRoomNew') as HTMLElement).textContent = ("ID : NULL");
+			const nameRoomNew = this.container.querySelector('#nameRoomNew');
+			const idRoomNew = this.container.querySelector('#idRoomNew');
+			if (nameRoomNew && idRoomNew)
+			{
+				(this.container.querySelector('#nameRoomNew') as HTMLElement).textContent = ("NULL");
+				(this.container.querySelector('#idRoomNew') as HTMLElement).textContent = ("ID : NULL");
+			}
 		}
 	}
 
@@ -1161,11 +910,11 @@ class RoomPage extends Page {
 		{
 			if (sessionStorage.getItem('room'))
 			{
-			alert("message recu WS true : " + event.data); // {"success":true,"cause":"end_of_tournament","winner":"baptiste"}
+			// alert("message recu WS true : " + event.data); // {"success":true,"cause":"end_of_tournament","winner":"baptiste"}
 
 			} else
 			{
-			alert("message recu WS false : " + event.data); // {"success":true,"cause":"end_of_tournament","winner":"baptiste"}
+			// alert("message recu WS false : " + event.data); // {"success":true,"cause":"end_of_tournament","winner":"baptiste"}
 
 			}
 
@@ -1186,7 +935,7 @@ class RoomPage extends Page {
 				// Si un joueur a est arrivé dans la room
 				if (obj_serv_ws.success == true && obj_serv_ws.cause == "user_joined")
 				{
-					alert("un joueur est arrivé. Affichage de la nouvelle liste de joueurs");
+					// alert("un joueur est arrivé. Affichage de la nouvelle liste de joueurs");
 					await this.changeRoomPageInformations();
 				}
 
@@ -1197,25 +946,17 @@ class RoomPage extends Page {
 
 					// Quelqu'un s'est deco en plein tournoi : je dois arreter le tournoi et me deco de la room
 
-					// J'ai été kick de la room
-					alert("quelqu'un s'est deconnecte du tournoi apres le démarrage, je dois quitter la room");
-
 					await this.removeLocalStorageTournament(); // TEST
-
-					// Supprime tous les localstorag associés a ce tournoi
-					// await this.removeLocalStorageTournament();
 
 					// Redirige et raffraichis la page si je suis kick d'une room
 					this.router?.navigate('/room');
-
-					// await this.changeRoomPage("out");
 				}
 
 				if (obj_serv_ws.success == true && obj_serv_ws.cause == "kick" && Number(obj_serv_ws.id_player) == Number(localvar?.user_id))
 				{
 
 					// J'ai été kick de la room
-					alert("je dois partir de la room");
+					// alert("je dois partir de la room");
 					sessionStorage.removeItem('room');
 					sessionStorage.setItem('tournament_started', "false"); // A FINIR
 
@@ -1232,58 +973,20 @@ class RoomPage extends Page {
 				// Si un joueur a qiutté la room (et si ce n'est pas moi)	
 				if (obj_serv_ws.success == true && obj_serv_ws.cause == "kick" && Number(obj_serv_ws.id_player) != Number(localvar?.user_id))
 				{
-
-					// J'ai été kick de la room
-					alert("un joueur est parti. Affichage de la nouvelle liste de joueurs");
-					// sessionStorage.removeItem('room');
-					// sessionStorage.setItem('tournament_started', "false"); // A FINIR
-
-					// Supprime tous les localstorag associés a ce tournoi
-					// await this.removeLocalStorageTournament();
-
 					await this.changeRoomPageInformations();
-
-					// Redirige et raffraichis la page si je suis kick d'une room
-					// this.router?.navigate('/room');
-
-					// await this.changeRoomPage("out");
 				}
 
 				if (obj_serv_ws.success == true && obj_serv_ws.cause == "list_matchs")
 				{
-					alert("nouveau round a afficher");
-					// Nouveaux round : j'affiche la liste des matchs 1v1
-					// alert("je dois afficher la liste des nouveaux matchs 1v1");
-					// await this.changeRoomPageInformationsStarted();
-
-
 					sessionStorage.setItem('tournament_started', "true"); // A FINIR
-
 
 					// Redirige et raffraichis la page pour afficher le menu en cas de nouveaux matchs
 					this.router?.navigate('/room');
-
-					// Ou je devrais peut etre envoyer une notification pour dire qu'il y a de nouveaux matchs
-
-					// await this.changeRoomPage("started");
 				}
 
 
 				if (obj_serv_ws.success == true && obj_serv_ws.cause == "end_of_tournament")
-				{
-
-					alert("le tournoi est FINI, je dois faire une redirection vers /room pour afficher le nom du vainqueur");
-					// Le tournoi est fini, j'affiche le nom du gagnant
-
-					// alert("le nom du gagnant est : " + obj_serv_ws.winner);
-
-
-					// OU je crée une fonction qui vérifie si la div avec l'id divRoom existe (a voir pour le nom)
-					// Si cette div existe alors je suis dans /room :je ne fais rien
-					// Si cette div n'existe PAS alors je suis peut etre dans /chat, dans ce cas
-						// je fais fais appel a une fonction qui vérifie si je suis dans /chat : je crée une div avec un message pour dire
-						// que c'est mon tour de jouer avec un bouton vers /room
-					
+				{					
 					sessionStorage.setItem("tournament_finished", "true");
 
 					// Redirige et raffraichis la page pour afficher le menu en cas de fin de partie
@@ -1299,7 +1002,7 @@ class RoomPage extends Page {
 		});
 
 		socket.addEventListener('close', () => {
-			alert("deconnecte de la room !");
+			//alert("deconnecte de la room !");
 			sessionStorage.setItem('tournament_started', "false"); // A FINIR
 
 		});
@@ -1311,7 +1014,11 @@ class RoomPage extends Page {
 
 		// Envoi un message toutes les 1 sec pour éviter la deconnexion et indiquer qu'on est encore en ligne
 		setInterval(() => {
-			socket.send("ping new"); // A DECOMMENTER APRES TEST
+			if (socket.readyState === WebSocket.OPEN)
+			{
+				socket.send("ping new"); // A DECOMMENTER APRES TEST
+			}
+
 			// alert("test ping en cours");
 		}, 4000);
 	}
@@ -1358,6 +1065,9 @@ class RoomPage extends Page {
 
 			// alert("test click join");
 
+			// TEST : je masque le bouton
+			(elt as HTMLElement).style.display = "none";
+
 
 			let roomId = Number((this.container.querySelector('#roomIdJoin') as HTMLInputElement).value);
 
@@ -1367,18 +1077,26 @@ class RoomPage extends Page {
 				{
 					if (await this.checkIfTournamentEnded(roomId))
 					{
-						alert("La room que vous essayez de joindre est déja finie")
+						alert("La room que vous essayez de joindre est déja finie");
+						(elt as HTMLElement).style.display = "inline-block";
 						return ;
 					}
 
 					if (await this.canShowRoomPage() == false)
 					{
 						alert("Join Button : cant access page because you are already in a room");
+						(elt as HTMLElement).style.display = "inline-block";
 						return ;
 					}
 
 					// Je rejoins la room créée
 					const room = await this.join_room_http(roomId);
+					if (room.success == false)
+					{
+						alert("erreur lors de la connexion a la room : " + room.error);
+						(elt as HTMLElement).style.display = "inline-block";
+						return ;
+					}
 					await this.connect_join_room(roomId);
 
 					// Je stocke le numero de la room dans un localstorage
@@ -1391,11 +1109,13 @@ class RoomPage extends Page {
 				else
 				{
 					alert("la room que vous essayez de joindre a déja commencé");
+					(elt as HTMLElement).style.display = "inline-block";
 				}
 			}
 			else
 			{
 				alert("la room que vous essayez de joindre n'existe pas, vérifiez l'id");
+				(elt as HTMLElement).style.display = "inline-block";
 			}
 
 
@@ -1533,17 +1253,20 @@ class RoomPage extends Page {
 			elt.addEventListener('click', async () => {
 
 
-
+				// Rend le bouton invisible
+				(elt as HTMLElement).style.display = "none";
+				
 				if (await this.canShowRoomPage() == false)
 				{
 					alert("you cant create a room because you are already in a room in another page");
+					(elt as HTMLElement).style.display = "inline-block";
 					return ;
 				}
 
 
 			let roomName : string = (this.container.querySelector('#roomNameCreate') as HTMLInputElement).value;
 			try {
-			const response = await fetch('https://localhost:4430/api/create_room', {
+			const response = await fetch('https://localhost:4430/api/pong/create_room', {
 				method: 'POST',
 				headers : {
 				'Content-Type': 'application/json'
@@ -1568,6 +1291,12 @@ class RoomPage extends Page {
 				
 				// Je rejoins la room créée
 				await this.join_room_http(result.room_id);
+				if (!result.room_id)
+				{
+					alert("error when creating room : no room id");
+					(elt as HTMLElement).style.display = "inline-block";
+					return ;
+				}
 				await this.connect_join_room(result.room_id);
 
 				// Je change le contenu de la roomPage
@@ -1578,12 +1307,18 @@ class RoomPage extends Page {
 			else
 			{
 				alert("error when creating room");
+				if (result.error == "name_too_long")
+				{
+					alert("The room name is too long (max 40 characters)");
+				}
+				(elt as HTMLElement).style.display = "inline-block";
 			}
 
 
 			} catch (err)
 			{
-			alert("erreur denvoi formulaire create room");
+				alert("erreur denvoi formulaire create room");
+				(elt as HTMLElement).style.display = "inline-block";
 			}
 
 		});
@@ -1626,6 +1361,10 @@ class RoomPage extends Page {
 	private async enable_kick_button()
 	{
 	const buttons = this.container.querySelectorAll('button[data-id]');
+	if (!buttons)
+	{
+		return ;
+	}
 	buttons.forEach(button => {
 		button.addEventListener('click', async (event) => {
 		const target = event.currentTarget as HTMLButtonElement;
@@ -1711,12 +1450,19 @@ class RoomPage extends Page {
 		{
 			elt.addEventListener('click', async () => {
 
+				// rendre le bouton invisible puis revisible
+				(elt as HTMLElement).style.display = "none";
+
 
 				// On vérifie sil y a au moins 2 joueurs
 				const nb = await this.my_room_nb_players();
 				if (nb < 2)
 				{
 					alert("The tournament can't start. It needs 2 or more players.");
+
+					// Rendre le bouton visible a nouveau
+					(elt as HTMLElement).style.display = "inline-block";
+
 					return ;
 				}
 
@@ -1772,7 +1518,7 @@ class RoomPage extends Page {
 						}
 
 							const result = await response.json();
-							alert("Room destroyed successfully : " + JSON.stringify(result));
+							// alert("Room destroyed successfully : " + JSON.stringify(result));
 							return (result);
 						} catch (err)
 						{
@@ -1792,10 +1538,10 @@ class RoomPage extends Page {
 		const elt = this.container.querySelector('#buttonFinish');
 		if (elt)
 		{
-			alert("le bouton quitfinishe exist");
+			// alert("le bouton quitfinishe exist");
 			elt.addEventListener('click', async () => {
 
-			alert("le bouton quitfinishe cliqued");
+			// alert("le bouton quitfinishe cliqued");
 
 				// Supprime les localstorage
 				sessionStorage.removeItem('room');
@@ -1831,7 +1577,7 @@ class RoomPage extends Page {
 			// alert("Can i play request received successfully : " + JSON.stringify(result));
 			if (result.success == false)
 			{
-				alert("success false dans result canplay");
+				//alert("success false dans result canplay");
 			}
 			
 			return {canPlay : result.can_play, match_id : result.match_id}
@@ -1860,9 +1606,15 @@ class RoomPage extends Page {
 
 			const localvar = JSON.parse(localstorage_room);
 
+			const nameRoomNewStarted = this.container.querySelector('#nameRoomNewStarted');
+			const idRoomNewStarted = this.container.querySelector('#idRoomNewStarted');
+
 			// Affiche le nom et l'id de la room
-			(this.container.querySelector('#nameRoomNewStarted') as HTMLElement).textContent = (localvar.room_name);
-			(this.container.querySelector('#idRoomNewStarted') as HTMLElement).textContent = ("ID : " + localvar.room_id);
+			if (nameRoomNewStarted && idRoomNewStarted)
+			{
+				(this.container.querySelector('#nameRoomNewStarted') as HTMLElement).textContent = (localvar.room_name);
+				(this.container.querySelector('#idRoomNewStarted') as HTMLElement).textContent = ("ID : " + localvar.room_id);
+			}
 
 
 			let room_id = localvar.room_id;
@@ -1888,8 +1640,13 @@ class RoomPage extends Page {
 		}
 		else
 		{
-			(this.container.querySelector('#nameRoomNew') as HTMLElement).textContent = ("NULL");
-			(this.container.querySelector('#idRoomNew') as HTMLElement).textContent = ("ID : NULL");
+			const nameRoomNew = this.container.querySelector('#nameRoomNew');
+			const idRoomNew = this.container.querySelector('#idRoomNew');
+			if (nameRoomNew && idRoomNew)
+			{
+				(this.container.querySelector('#nameRoomNew') as HTMLElement).textContent = ("NULL");
+				(this.container.querySelector('#idRoomNew') as HTMLElement).textContent = ("ID : NULL");
+			}
 		}
 	}
 
@@ -1921,7 +1678,7 @@ class RoomPage extends Page {
 			}
 			else
 			{
-				alert("no round yet to show");
+				//alert("no round yet to show");
 			}
 		} catch (err)
 		{
@@ -2019,9 +1776,13 @@ class RoomPage extends Page {
 						joinMatchButton.setAttribute('href', '/play');
 						joinMatchButton.id = 'joinRealMatch';
 						joinMatchButton.textContent = "Join my 1v1 match";
-						joinMatchButton.className = "bg-gray-400 text-black px-4 py-2 rounded text-xl";
-						(this.container.querySelector('#joinMatchDiv') as HTMLElement).innerHTML = '';
-						this.container.querySelector('#joinMatchDiv')?.appendChild(joinMatchButton);
+						joinMatchButton.className = "inline-block bg-gradient-to-r from-neon-cyan to-neon-pink text-white px-4 py-2 rounded text-xl";
+
+						if (this.container.querySelector('#joinMatchDiv'))
+						{
+							(this.container.querySelector('#joinMatchDiv') as HTMLElement).innerHTML = '';
+							this.container.querySelector('#joinMatchDiv')?.appendChild(joinMatchButton);
+						}
 
 					}
 					else 
@@ -2034,8 +1795,11 @@ class RoomPage extends Page {
 						const joinMatchText = document.createElement('p');
 						joinMatchText.className = "text-white px-4 py-2 rounded text-xl";
 						joinMatchText.textContent = "Waiting for the next match...";
-						(this.container.querySelector('#joinMatchDiv') as HTMLElement).innerHTML = '';
-						this.container.querySelector('#joinMatchDiv')?.appendChild(joinMatchText);
+						if (this.container.querySelector('#joinMatchDiv'))
+						{
+							(this.container.querySelector('#joinMatchDiv') as HTMLElement).innerHTML = '';
+							this.container.querySelector('#joinMatchDiv')?.appendChild(joinMatchText);
+						}
 
 					}
 				} catch (err)
@@ -2109,7 +1873,7 @@ class RoomPage extends Page {
 
 
 				// Ajoute une ligne match au tableau
-				const tablePlayersRoomStarted = this.container?.querySelector('#tablePlayersRoomStarted') as HTMLElement;
+				const tablePlayersRoomStarted = this.container.querySelector('#tablePlayersRoomStarted');
 				if (tablePlayersRoomStarted)
 				{
 					(tablePlayersRoomStarted).appendChild(lineTable);
@@ -2153,7 +1917,7 @@ class RoomPage extends Page {
 				const result = await response.json();
 				if (result.success == true)
 				{
-					alert("je quitte la room");
+					// alert("je quitte la room");
 					await this.removeLocalStorageTournament();
 					// this.router?.navigate('/room'); // A changer par la suite
 
@@ -2173,21 +1937,72 @@ class RoomPage extends Page {
 		if (elt)
 		{
 			elt.addEventListener('click', async () => {
-			alert("je vais qiutter la room");
+			// alert("je vais qiutter la room");
 
 			await this.quitRoom();
-
-				// Retour dans la room out
-			// alert("je dois me rediriger pour qiutter la room");
-
-			// this.router?.navigate('/room'); // A changer par la suite
-
-				// await this.changeRoomPage("out");
-
 			});
 		}
 	}
 
+	// Handle Play Again button click - creates a new room to play another tournament
+	private async playAgainClickEvent()
+	{
+		const elt = this.container.querySelector('#buttonPlayAgain');
+		if (elt)
+		{
+			elt.addEventListener('click', async () => {
+				try {
+					sessionStorage.removeItem('room');
+					sessionStorage.removeItem('finished');
+					sessionStorage.removeItem('tournament_started');
+					sessionStorage.removeItem('tournament_finished');
+					sessionStorage.removeItem('match_id');
+
+					await this.changeRoomPage("out");
+					
+					const messageOut = this.container.querySelector('#messageOut');
+					if (messageOut) {
+						(messageOut as HTMLElement).style.display = "block";
+						(messageOut as HTMLElement).textContent = "Ready for a new tournament! Create or join a room.";
+						(messageOut as HTMLElement).style.color = "#00ffff"; // cyan color
+						
+						setTimeout(() => {
+							(messageOut as HTMLElement).style.display = "none";
+						}, 3000);
+					}
+				} catch (error) {
+					console.error("Error in play again:", error);
+					alert("Error starting new game. Please try again.");
+				}
+			});
+		}
+	}
+
+	private async mainMenuClickEvent()
+	{
+		const elt = this.container.querySelector('#buttonMainMenu');
+		if (elt)
+		{
+			elt.addEventListener('click', async () => {
+				try {
+					sessionStorage.removeItem('room');
+					sessionStorage.removeItem('finished');
+					sessionStorage.removeItem('tournament_started');
+					sessionStorage.removeItem('tournament_finished');
+					sessionStorage.removeItem('match_id');
+
+					if (this.router) {
+						this.router.navigate('/dashboard');
+					} else {
+						window.location.href = '/dashboard';
+					}
+				} catch (error) {
+					console.error("Error navigating to main menu:", error);
+					alert("Error navigating to main menu. Please try again.");
+				}
+			});
+		}
+	}
 }
 
 export default RoomPage;

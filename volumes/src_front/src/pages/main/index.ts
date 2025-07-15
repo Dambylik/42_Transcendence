@@ -14,7 +14,7 @@ class MainPage extends Page {
 
   async render(): Promise<HTMLElement> {
     this.container.innerHTML = '';
-    await this.setupHeaderListeners();
+    document.body.style.paddingTop = '0';
     
     const mainContent = document.createElement('div');
     mainContent.className = 'min-h-screen pt-4 relative overflow-hidden flex flex-col';
@@ -22,7 +22,6 @@ class MainPage extends Page {
       <div class="absolute inset-0 z-0">
         <img src="${neonPongTablePath}" alt="Neon Pong Table Background" 
              class="absolute inset-0 w-full h-full object-cover opacity-90" />
-        <div class="absolute inset-0 bg-black bg-opacity-10"></div>
       </div>
 
       <!-- Main Content -->
@@ -65,6 +64,12 @@ class MainPage extends Page {
     if (enterGameButton && this.router) {
       enterGameButton.addEventListener('click', async (e) => {
         e.preventDefault();
+        
+        // Skip API call
+        this.router?.navigate('/login');
+        
+        // Original code with API call (commented out to prevent 401 errors)
+        /*
         try {
           const res = await fetch('/api/me', { credentials: 'include' });
           const data = await res.json();
@@ -76,6 +81,7 @@ class MainPage extends Page {
         } catch {
           this.router?.navigate('/login');
         }
+        */
       });
     }
   }

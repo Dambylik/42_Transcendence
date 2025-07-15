@@ -23,6 +23,8 @@ class SettingsPage extends Page {
         last_username_change: null
     };
 
+    private totp_enabled : boolean = false;
+
     constructor(id: string, router?: Router) {
         super(id, router);
     }
@@ -42,6 +44,10 @@ class SettingsPage extends Page {
         this.container.innerHTML = '';
         await super.setupHeaderListeners();
 
+
+        // await this.checkIf2faActivated(); // TEST EN COURS
+
+
         const profileContent = document.createElement('div');
         profileContent.className = 'min-h-screen pt-16 relative overflow-hidden flex flex-row bg-cyber-dark'; 
         profileContent.id = 'settings-page-container';
@@ -57,6 +63,8 @@ class SettingsPage extends Page {
 
         // Après affichage : on fetch et on render les composants
         this.loadAndRender();
+
+        // await this.checkIf2faActivated();
 
         return this.container;
     }
@@ -93,6 +101,8 @@ class SettingsPage extends Page {
                 this.userData.is_2fa_enabled = false;
                 this.userData.last_username_change = null;
             }    
+            await this.checkIf2faActivated(); // TEST EN COURS
+
             this.renderSettingsComponents();
         } catch (err) {
             console.error('Erreur lors du chargement des données de settings :', err);
@@ -112,6 +122,38 @@ class SettingsPage extends Page {
         } else {
             console.error('One or more settings containers not found!');
         }
+    }
+
+    // Vérifie si le 2FA est activé et stocke le résultat dans une propriété de la classe
+    private async checkIf2faActivated()
+    {
+        try {
+            const response = await fetch('/api/2fa/activated', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            const data = await response.json();
+            if (data.success && data.activated)
+            {
+                this.totp_enabled = true;
+                return true;
+            }
+            else if (data.success && !(data.activated))
+            {
+                this.totp_enabled = false;
+                return false;
+            }
+            else {
+                alert("error access checkIf2faActivated");
+                this.totp_enabled = false;
+                return false;
+            }
+        } catch (error)
+        {
+            alert("catch checkIf2faActivated");
+        }
+
     }
     
 
@@ -158,23 +200,6 @@ class SettingsPage extends Page {
                         </div>
                     </div>
                 </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label for="verificationCode" class="text-neon-cyan font-tech text-sm block mb-1">VERIFICATION CODE</label>
-                        <input 
-                            type="text" 
-                            id="verificationCode" 
-                            placeholder="Enter 6-digit code" 
-                            class="w-full bg-cyber-darker border border-neon-pink/30 text-white px-3 py-2 rounded"
-                            maxlength="6"
-                        />
-                    </div>
-                    <button id="verify-tfa" class="bg-gradient-to-r from-neon-pink to-neon-cyan text-white font-cyber px-4 py-2 rounded flex items-center hover:shadow-lg hover:shadow-neon-pink/50 duration-300 w-full justify-center">
-                        <span class="mr-2">✓</span>
-                        Verify & Enable 2FA
-                    </button>
-                </div>
             </div>
             
             <!-- Login Activity -->
@@ -207,24 +232,77 @@ class SettingsPage extends Page {
         const tfaSetup = card.querySelector('#tfa-setup') as HTMLElement;
         
         if (tfaToggle && tfaIndicator && tfaSetup) {
+
+            // Vérifie si le 2FA est activé pour ce compte
+            if (this.totp_enabled)
+            {
+                // Le 2FA est activé
+                tfaIndicator.classList.remove('translate-x-0', 'bg-gray-400');
+                tfaIndicator.classList.add('translate-x-6', 'bg-blue-400');
+                tfaToggle.checked = true;
+            }
+
+
             if (!this.userData.is_2fa_enabled) {
                 tfaSetup.classList.add('hidden');
             } else {
                 tfaSetup.classList.remove('hidden');
             }
             
-            tfaToggle.addEventListener('change', () => {
+            tfaToggle.addEventListener('change', async () => {
                 if (tfaToggle.checked) {
-                    tfaSetup.classList.remove('hidden');
                     tfaIndicator.classList.remove('translate-x-0', 'bg-gray-400');
-                    tfaIndicator.classList.add('translate-x-6', 'bg-green-400');
+                    tfaIndicator.classList.add('translate-x-6', 'bg-blue-400');
+                    
+                    try {
+                        const response = await fetch('/api/2fa/setup', {
+                            method: 'GET',
+                            credentials: 'include'
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            this.displayTwoFactorSetup(data.qr_image, data.secret_key);
+                            tfaSetup.classList.remove('hidden');
+                            tfaIndicator.classList.remove('bg-blue-400');
+                            tfaIndicator.classList.add('bg-yellow-400');
+                            showNotification('Scan the QR code with your authenticator app and enter the verification code below.', 'success');
+                        } else {
+                            throw new Error(data.error || 'Failed to setup 2FA');
+                        }
+                    } catch (error) {
+                        console.error('2FA setup error:', error);
+                        tfaToggle.checked = false;
+                        tfaIndicator.classList.remove('translate-x-6', 'bg-blue-400');
+                        tfaIndicator.classList.add('translate-x-0', 'bg-gray-400');
+                        showNotification(`Failed to setup 2FA: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                    }
                 } else {
+                    // Disable 2FA - just hide the setup and reset indicator
+                    // alert("2FA will be disabled");
+                    try {
+                        const response = await fetch('/api/2fa/disable', {
+                            method: 'GET',
+                            credentials: 'include'
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success)
+                        {
+                            // alert("The 2FA has been disabled");
+                            showNotification('Two-Factor Authentication has been disabled.', 'success');
+                        }
+                    } catch (error)
+                    {
+                        showNotification('Failed to disable 2FA.', 'error');
+                    }
                     tfaSetup.classList.add('hidden');
-                    tfaIndicator.classList.remove('translate-x-6', 'bg-green-400');
+                    tfaIndicator.classList.remove('translate-x-6', 'bg-green-400', 'bg-yellow-400');
                     tfaIndicator.classList.add('translate-x-0', 'bg-gray-400');
-
+                    this.clearTwoFactorSetup();
                     this.userData.is_2fa_enabled = false;
-                    showNotification('Two-Factor Authentication has been disabled.', 'error');
+                    // showNotification('Two-Factor Authentication has been disabled.', 'success');
                 }
             });
             
@@ -237,22 +315,6 @@ class SettingsPage extends Page {
                     }
                 });
             }
-        }
-        
-        const verifyButton = card.querySelector('#verify-tfa');
-        const verificationInput = card.querySelector('#verificationCode') as HTMLInputElement;
-        
-        if (verifyButton && verificationInput) {
-            verifyButton.addEventListener('click', () => {
-                const code = verificationInput.value.trim();
-                if (code.length === 6 && /^\d+$/.test(code)) {
-                    this.userData.is_2fa_enabled = true;
-                    tfaSetup.classList.add('hidden');
-                    showNotification('Two-Factor Authentication has been enabled successfully.', 'success');
-                } else {
-                    showNotification('Please enter a valid 6-digit verification code.', 'error');
-                }
-            });
         }
         
         this.loadLoginActivity().catch(err => console.error('Failed initial load login activity:', err));
@@ -280,6 +342,15 @@ class SettingsPage extends Page {
                         if (result.success) {
                             showNotification('Successfully signed out from all devices. Redirecting to login...', 'success');
                             (window as any).user = null;
+                            
+                            try {
+                              if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                                (google.accounts.id as any).disableAutoSelect?.();
+                              }
+                            } catch (error) {
+                              console.log('Google session clearing not available:', error);
+                            }
+                            
                             localStorage.removeItem('session_id');
                             localStorage.removeItem('auth_token');
                             const cookiesToClear = ['token', 'session_id'];
@@ -772,23 +843,19 @@ class SettingsPage extends Page {
 
             let usernameCheckTimeout: number;
 
-            // Check if username change is on cooldown - use server data immediately
             const usernameStatus = this.canChangeUsername();
             if (!usernameStatus.canChange) {
-                // Block input completely when on cooldown
                 newUsernameInput.readOnly = true;
                 newUsernameInput.style.pointerEvents = 'none';
                 newUsernameInput.style.cursor = 'not-allowed';
                 newUsernameInput.placeholder = 'You already changed your username';
                 newUsernameInput.classList.add('opacity-50', 'bg-cyber-darker', 'border-red-500/50', 'text-red-400/70');
                 
-                // Update validation message to show cooldown info immediately
                 if (validationMessage) {
                     validationMessage.className = 'text-xs text-red-400';
                     validationMessage.classList.remove('hidden');
                 }
                 
-                // Show immediate feedback when trying to interact with blocked input
                 ['focus', 'click', 'keydown', 'input', 'paste'].forEach(eventType => {
                     newUsernameInput.addEventListener(eventType, (e) => {
                         e.preventDefault();
@@ -796,11 +863,9 @@ class SettingsPage extends Page {
                         if (e.type === 'focus' || e.type === 'click') {
                             newUsernameInput.blur();
                         }
-                        // Show notification only on first interaction attempt
                         if (!newUsernameInput.dataset.notificationShown) {
                             showNotification(`You already changed your username. You can change it again in ${usernameStatus.remainingDays} day${usernameStatus.remainingDays !== 1 ? 's' : ''}`, 'error');
                             newUsernameInput.dataset.notificationShown = 'true';
-                            // Reset the flag after 3 seconds
                             setTimeout(() => {
                                 delete newUsernameInput.dataset.notificationShown;
                             }, 3000);
@@ -808,19 +873,16 @@ class SettingsPage extends Page {
                     });
                 });
                 
-                // Also disable the save button
-                if (saveButton) {
+               if (saveButton) {
                     (saveButton as HTMLButtonElement).disabled = true;
                     saveButton.innerHTML = '<span class="mr-2">🚫</span>Username Change on Cooldown';
                     saveButton.classList.add('opacity-50', 'cursor-not-allowed');
                 }
                 
-                return; // Exit early if on cooldown
+                return;
             }
 
-            // Normal username input validation (only if not on cooldown)
             newUsernameInput.addEventListener('input', () => {
-                // Double-check cooldown status on each input
                 const currentStatus = this.canChangeUsername();
                 if (!currentStatus.canChange) {
                     newUsernameInput.value = '';
@@ -979,12 +1041,26 @@ class SettingsPage extends Page {
                     passwordStrengthIndicators[1].className = 'text-red-400 mr-1';
                     passwordStrengthIndicators[1].textContent = '✗';
                 }
-                if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+                if (/[a-z]/.test(password)) {
                     passwordStrengthIndicators[2].className = 'text-green-400 mr-1';
                     passwordStrengthIndicators[2].textContent = '✓';
                 } else {
                     passwordStrengthIndicators[2].className = 'text-red-400 mr-1';
                     passwordStrengthIndicators[2].textContent = '✗';
+                }
+                if (/[0-9]/.test(password)) {
+                    passwordStrengthIndicators[3].className = 'text-green-400 mr-1';
+                    passwordStrengthIndicators[3].textContent = '✓';
+                } else {
+                    passwordStrengthIndicators[3].className = 'text-red-400 mr-1';
+                    passwordStrengthIndicators[3].textContent = '✗';
+                }
+                if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+                    passwordStrengthIndicators[4].className = 'text-green-400 mr-1';
+                    passwordStrengthIndicators[4].textContent = '✓';
+                } else {
+                    passwordStrengthIndicators[4].className = 'text-red-400 mr-1';
+                    passwordStrengthIndicators[4].textContent = '✗';
                 }
             });
         }
@@ -1186,6 +1262,44 @@ class SettingsPage extends Page {
         return maxLength > 0 ? matches / maxLength : 0;
     }
     
+    
+    
+    private displayTwoFactorSetup(qrImage: string, secretKey: string): void {
+        // Find the QR code container
+        const qrContainer = document.querySelector('#tfa-setup .w-36.h-36 > div') as HTMLElement;
+        if (!qrContainer) {
+            console.error('QR code container not found');
+            return;
+        }
+        
+        // Clear existing content and add QR code
+        qrContainer.innerHTML = `
+            <img src="${qrImage}" alt="2FA QR Code" class="w-full h-full object-contain rounded" />
+        `;
+    }
+
+
+    private clearTwoFactorSetup(): void {
+        // Reset QR code container
+        const qrContainer = document.querySelector('#tfa-setup .w-36.h-36 > div') as HTMLElement;
+        if (qrContainer) {
+            qrContainer.innerHTML = `
+                <span class="text-white font-cyber text-xs text-center">QR Code will appear here when activated</span>
+                <div class="absolute -top-2 -left-2 w-6 h-6 border-l-2 border-t-2 border-neon-pink"></div>
+                <div class="absolute -top-2 -right-2 w-6 h-6 border-r-2 border-t-2 border-neon-cyan"></div>
+                <div class="absolute -bottom-2 -left-2 w-6 h-6 border-l-2 border-b-2 border-neon-cyan"></div>
+                <div class="absolute -bottom-2 -right-2 w-6 h-6 border-r-2 border-b-2 border-neon-pink"></div>
+            `;
+        }
+        
+        // Clear verification input
+        const verificationInput = document.getElementById('verificationCode') as HTMLInputElement;
+        if (verificationInput) {
+            verificationInput.value = '';
+        }
+    }
+    
+
     cleanup(): void {
         // AMÉLIORATION : Nettoyage spécifique à la page de settings
         const container = document.getElementById('settings-page-container');

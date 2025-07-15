@@ -1,9 +1,10 @@
 import Page from './page';
 import { Router } from '../../../router/Router';
-import PongComponent from '../components/pong/pong';
+// Dynamic import to reduce bundle size
+// import PongComponent from '../components/pong/pong';
 
 export default abstract class BasePongPage extends Page {
-    protected pongComponent: PongComponent | null = null;
+    protected pongComponent: any | null = null; // Use any to avoid static import
     protected container: HTMLElement;
 
     constructor(id: string, router?: Router)
@@ -40,6 +41,7 @@ export default abstract class BasePongPage extends Page {
         
         if (this.pongComponent)
         {
+            this.pongComponent.destroy();
             this.pongComponent = null;
         }
         

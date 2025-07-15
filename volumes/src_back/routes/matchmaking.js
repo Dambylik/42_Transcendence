@@ -51,10 +51,13 @@ db.all = util.promisify(db.all);
 
 // Crée la table dans la bdd si elle n'existe pas
 (async () => {
-        await db.run(`CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar (255) DEFAULT NULL, started BOOLEAN NOT NULL DEFAULT FALSE, round INTEGER DEFAULT 0, finished BOOLEAN NOT NULL DEFAULT FALSE, finished_with_error BOOLEAN NOT NULL DEFAULT FALSE, id_admin INTEGER NOT NULL, winner_id INTEGER DEFAULT 0, created_at DATETIME DEFAULT (datetime('now')))`);
+        await db.run(`CREATE TABLE IF NOT EXISTS rooms (id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar (255) DEFAULT NULL, game_type varchar (50) DEFAULT 'pong', started BOOLEAN NOT NULL DEFAULT FALSE, round INTEGER DEFAULT 0, finished BOOLEAN NOT NULL DEFAULT FALSE, finished_with_error BOOLEAN NOT NULL DEFAULT FALSE, id_admin INTEGER NOT NULL, winner_id INTEGER DEFAULT 0, created_at DATETIME DEFAULT (datetime('now')))`);
         await db.run(`CREATE TABLE IF NOT EXISTS rooms_players (id INTEGER PRIMARY KEY AUTOINCREMENT, id_player INTEGER NOT NULL, id_room INTEGER NOT NULL, is_admin BOOLEAN NOT NULL DEFAULT FALSE, eliminated BOOLEAN NOT NULL DEFAULT FALSE, created_at DATETIME DEFAULT (datetime('now')))`);
         await db.run(`CREATE TABLE IF NOT EXISTS matchs_history (id INTEGER PRIMARY KEY AUTOINCREMENT, first_player INTEGER, second_player INTEGER DEFAULT NULL, id_room INTEGER, winner_id INTEGER DEFAULT NULL, bypass BOOLEAN NOT NULL DEFAULT FALSE, round INTEGER DEFAULT 0, started BOOLEAN NOT NULL DEFAULT FALSE, first_player_connected BOOLEAN NOT NULL DEFAULT FALSE, second_player_connected BOOLEAN NOT NULL DEFAULT FALSE, gave_up BOOLEAN NOT NULL DEFAULT FALSE, created_at DATETIME DEFAULT (datetime('now')))`);
         await db.run(`CREATE TABLE IF NOT EXISTS invitations_tournament (id INTEGER PRIMARY KEY AUTOINCREMENT, id_player INTEGER, id_room INTEGER, created_at DATETIME DEFAULT (datetime('now')))`);
+        
+        // Add game_type column to existing rooms table if it doesn't exist
+        await db.run(`ALTER TABLE rooms ADD COLUMN game_type varchar(50) DEFAULT 'pong'`).catch(() => {}); // Ignore error if column exists
 })();
 
 
@@ -131,20 +134,46 @@ async function matchmakingRoutes(fastify, options)
 
     /////// !!!! attention : je dois faire une verification de cookies par la
     //  Permet de créer une room, la personne qui crée la room devient admin
-    fastify.post('/api/create_room', {preValidation: [fastify.authenticate]}, async (request, reply) => {
+    fastify.post('/api/pong/create_room', {preValidation: [fastify.authenticate]}, async (request, reply) => {
 
         console.log("created aaa");
 
         // Variables utilisées
-        const { name } = request.body;
+        const { name, game_type = 'pong' } = request.body;
         let user_id = request.user.id; // par la suite
         // let user_id = 1; // request.user.id par la suite
+
+        // Validate game_type
+        if (game_type !== 'pong' && game_type !== 'connect4') {
+            return ({success : false, error : "invalid_game_type"});
+        }
+
+        // Je vérifie si je ne suis pas déjà dans une room
+        let in_room = false;
+        try {
+            id_room = await myRoomId(request.user.id);
+            in_room = true;
+        } catch (err)
+        {
+            in_room = false;
+        }
+        if (in_room)
+        {
+            return ({success : false, error : "already_in_room"});
+        }
+
+        // Je verifie si le nom de la room nest pas trop long
+        if (name.length > 40)
+        {
+            return ({success : false, error : "name_too_long"});
+        }
+
 
         // Crée la room dans la base de données
         try {
         console.log("created 2");
 
-            await db.run("INSERT INTO rooms (name, started, finished, id_admin) VALUES (?, ?, ?, ?)", [name, false, false, user_id]);
+            await db.run("INSERT INTO rooms (name, game_type, started, finished, id_admin) VALUES (?, ?, ?, ?, ?)", [name, game_type, false, false, user_id]);
         } catch(err)
         {
             console.log("eerr crea");
@@ -174,12 +203,115 @@ async function matchmakingRoutes(fastify, options)
                 secure : true,
                 sameSite : 'Strict',
                 path : '/'
-        }).send({success: true, room_id:room_db.id, room_name: name, user_id : user_id, is_admin:true});
+        }).send({success: true, room_id:room_db.id, room_name: name, user_id : user_id, is_admin:true, game_type: game_type});
 
         
         // Pour décoder un cookie coté client :
         // JSON.parse(decodeURIComponent(lecookie)); // Je dois aussi créer une fonction pour séparer tous les cookies de document.cookie
     });
+    fastify.post('/api/connect4/create_room', {preValidation: [fastify.authenticate]}, async (request, reply) => {
+
+        console.log("created aaa");
+
+        // Variables utilisées
+        const { name } = request.body;
+        let user_id = request.user.id;
+
+        // On force game_type à 'connect4'
+        const game_type = 'connect4';
+
+        // Je vérifie si je ne suis pas déjà dans une room
+        let in_room = false;
+        try {
+            id_room = await myRoomId(request.user.id);
+            in_room = true;
+        } catch (err)
+        {
+            in_room = false;
+        }
+        if (in_room)
+        {
+            return ({success : false, error : "already_in_room"});
+        }
+
+        // Je verifie si le nom de la room nest pas trop long
+        if (name.length > 40)
+        {
+            return ({success : false, error : "name_too_long"});
+        }
+
+        // Crée la room dans la base de données
+        try {
+            console.log("created 2");
+            await db.run("INSERT INTO rooms (name, game_type, started, finished, id_admin) VALUES (?, ?, ?, ?, ?)", [name, game_type, false, false, user_id]);
+        } catch(err)
+        {
+            console.log("eerr crea");
+            console.log(err);
+            return ({success : false, error : "db_access"});
+        }
+
+        // Récupère l'id de la room créé
+        let room_db;
+        try {
+            room_db = await db.get("SELECT * FROM rooms WHERE id_admin = ? ORDER BY id DESC LIMIT 1", [user_id]);
+        } catch(err)
+        {
+            return ({success : false, error : "db_access"});
+        }
+
+        // Crée le contenu du cookie
+        const room_cookie = {room_id:room_db.id, admin:true};
+
+        console.log("created ok");
+
+        return reply.setCookie('room_id', encodeURIComponent(JSON.stringify(room_cookie)), {
+                httpOnly: false,
+                secure : true,
+                sameSite : 'Strict',
+                path : '/'
+        }).send({success: true, room_id:room_db.id, room_name: name, user_id : user_id, is_admin:true, game_type: game_type});
+
+        // Pour décoder un cookie coté client :
+        // JSON.parse(decodeURIComponent(lecookie)); // Je dois aussi créer une fonction pour séparer tous les cookies de document.cookie
+    });
+
+        fastify.get('/api/join_room/:id', {preValidation: [fastify.authenticate]}, async (request, reply) => {
+            const user_id = request.user.id;
+            const room_id = request.params.id;
+
+            // Vérifie si la room existe et récupère son game_type
+            let room;
+            try {
+                room = await db.get("SELECT * FROM rooms WHERE id = ?", [room_id]);
+                if (!room) {
+                    return ({success: false, error: "room_not_exists"});
+                }
+            } catch (err) {
+                return ({success: false, error: "db_access"});
+            }
+
+            // Redirige vers la bonne route selon le game_type
+            if (room.game_type === 'pong') {
+                return fastify.inject({
+                    method: 'GET',
+                    url: `/api/pong/join_room/${room_id}`,
+                    headers: request.headers,
+                    cookies: request.cookies,
+                    payload: request.body
+                }).then(res => reply.send(JSON.parse(res.payload)));
+            } else if (room.game_type === 'connect4') {
+                return fastify.inject({
+                    method: 'GET',
+                    url: `/api/connect4/join_room/${room_id}`,
+                    headers: request.headers,
+                    cookies: request.cookies,
+                    payload: request.body
+                }).then(res => reply.send(JSON.parse(res.payload)));
+            } else {
+                return ({success: false, error: "invalid_game_type"});
+            }
+        });
 
     // Accepte la connexion WS admin pour la personne qui a créé la room
   fastify.get('/api/ws/join_room/:id', {websocket: true }, async (socket , req) => {
@@ -267,6 +399,25 @@ async function matchmakingRoutes(fastify, options)
     {
         fastify.roomsMap.set(Number(room_id), []);
     }
+
+
+    // Empeche de se connecter plus d'une fois au WS pour la room
+    if (fastify.roomsMap.has(Number(room_id)))
+    {
+        // let room_actual_test = fastify.roomsMap.get(Number(id_room));
+        const room = fastify.roomsMap.get(Number(room_id));
+        for (const playertest of room)
+        {
+            if (Number(playertest.id_player) == Number(user_id))
+            {
+                // L'utilisateur est déja dans la map WS pour la room, je dois fermer ce WS et ne pas l'ajouter
+                socket.close();
+                return;
+            }
+        }
+
+
+    }
     fastify.roomsMap.get(Number(room_id)).push({id_player:user_id, "ws" : socket});
 
     // Envoie message a tous les users dans la room pour indiquer qu'un utilisateur a bien rejoint
@@ -347,6 +498,8 @@ async function matchmakingRoutes(fastify, options)
         // }
     });
 
+
+
     socket.on('close', async (code, reason) => {
 
 
@@ -410,8 +563,8 @@ async function matchmakingRoutes(fastify, options)
   });
 
 
-    //  Permet de créer une room, la personne qui crée la room devient admin
-    fastify.get('/api/join_room/:id', {preValidation: [fastify.authenticate]}, async (request, reply) => {
+    //  Permet de rejoindre une room de pong
+    fastify.get('/api/pong/join_room/:id', {preValidation: [fastify.authenticate]}, async (request, reply) => {
 
         // Je récupère les données (a remplacer par contenu du cookie JWT par la suite)
         const user_id = request.user.id; // A remplacer par 
@@ -420,7 +573,7 @@ async function matchmakingRoutes(fastify, options)
 
         // A FAIRE : verifier que la room existe et qu'on a le droit de la rejoindre
 
-        // Vérifie si le tournoi a deja commencé
+        // Vérifie si le tournoi a deja commencé et si c'est bien une room de pong
         let room_test;
         try {
             room_test = await db.get("SELECT * FROM rooms WHERE id = ? ORDER BY id DESC LIMIT 1", [room_id]);
@@ -431,6 +584,11 @@ async function matchmakingRoutes(fastify, options)
             }
             else
             {
+                // Vérifie si c'est bien une room de pong
+                if (room_test.game_type !== 'pong') {
+                    return ({success : false, error : "wrong_game_type"});
+                }
+                
                 if (Number(room_test.round > 0))
                 {
                     // Le tournoi a deja commencé
@@ -442,6 +600,21 @@ async function matchmakingRoutes(fastify, options)
         {
             return ({success : false, error : "db_access"});
         }
+
+        // Vérifie si je ne suis pas déja dans la room
+        try {
+            const in_room = await db.get("SELECT * FROM rooms_players WHERE id_room = ? AND id_player = ?", [room_id, user_id]);
+
+            if (in_room)
+            {
+                return ({success : false, error : "already_in_room"});
+            }
+
+        } catch(err)
+        {
+            return ({success : false, error : "db_access"});
+        }
+
 
 
         // Ajoute une ligne dans la bdd pour indiquer qu'on a rejoint la room
@@ -478,12 +651,97 @@ async function matchmakingRoutes(fastify, options)
                 secure : true,
                 sameSite : 'Strict',
                 path : '/'
-        }).send({success: true, room_id:room_db.id, room_name: room_db.name, user_id:user_id});
+        }).send({success: true, room_id:room_db.id, room_name: room_db.name, user_id:user_id, game_type: room_db.game_type});
 
     });
 
 
+    //  Permet de rejoindre une room de connect4
+    fastify.get('/api/connect4/join_room/:id', {preValidation: [fastify.authenticate]}, async (request, reply) => {
 
+        // Je récupère les données (a remplacer par contenu du cookie JWT par la suite)
+        const user_id = request.user.id;
+        const room_id = request.params.id;
+
+        // A FAIRE : verifier que la room existe et qu'on a le droit de la rejoindre
+
+        // Vérifie si le tournoi a deja commencé et si c'est bien une room de connect4
+        let room_test;
+        try {
+            room_test = await db.get("SELECT * FROM rooms WHERE id = ? ORDER BY id DESC LIMIT 1", [room_id]);
+
+            if (!(room_test))
+            {
+                return ({success : false, error : "room_not_exists"});
+            }
+            else
+            {
+                // Vérifie si c'est bien une room de connect4
+                if (room_test.game_type !== 'connect4') {
+                    return ({success : false, error : "wrong_game_type"});
+                }
+                
+                if (Number(room_test.round > 0))
+                {
+                    // Le tournoi a deja commencé
+                    return ({success : false, error : "already_started"});
+                }
+            }
+
+        } catch(err)
+        {
+            return ({success : false, error : "db_access"});
+        }
+
+        // Vérifie si je ne suis pas déja dans la room
+        try {
+            const in_room = await db.get("SELECT * FROM rooms_players WHERE id_room = ? AND id_player = ?", [room_id, user_id]);
+
+            if (in_room)
+            {
+                return ({success : false, error : "already_in_room"});
+            }
+
+        } catch(err)
+        {
+            return ({success : false, error : "db_access"});
+        }
+
+        // Ajoute une ligne dans la bdd pour indiquer qu'on a rejoint la room
+        try {
+            await db.run("INSERT INTO rooms_players (id_player, id_room, is_admin) VALUES (?, ?, ?)", [user_id, room_id, false]);
+        } catch(err)
+        {
+            return ({success : false, error : "db_access"});
+        }
+
+        // Récupère des infos sur la room rejointe
+        let room_db;
+        try {
+            room_db = await db.get("SELECT * FROM rooms WHERE id = ? ORDER BY id DESC LIMIT 1", [room_id]);
+
+            if (!(room_db))
+            {
+                return ({success : false, error : "room_not_exists"});
+            }
+
+        } catch(err)
+        {
+            return ({success : false, error : "db_access"});
+        }
+
+        // Crée le contenu du cookie
+        const room_cookie = {room_id:room_db.id, admin:true};
+
+        // return fastify.roomsMap.get(123);
+        return reply.setCookie('room_id', encodeURIComponent(JSON.stringify(room_cookie)), {
+                httpOnly: false,
+                secure : true,
+                sameSite : 'Strict',
+                path : '/'
+        }).send({success: true, room_id:room_db.id, room_name: room_db.name, user_id:user_id, game_type: room_db.game_type});
+
+    });
 
     // Envoyé par le createur de la room : génère les premiers matchs et envoie une notif a tous ceux qui doivent jouer
     fastify.get('/api/start/:id', {preValidation: [fastify.authenticate]}, async (request, reply) => {
@@ -532,6 +790,19 @@ async function matchmakingRoutes(fastify, options)
             return ({success:false, error:"room_not_exists"});
             // return ;
         }
+
+        // Verifie si il y a au moins deux joueurs
+        try {
+            const nb_players = await countPlayersInRoom(id_room);
+            if (nb_players <= 1)
+            {
+                return ({success:false, error:"not_enough_players"});
+            }
+        } catch (err)
+        {
+            return ({success:false, error:"db_access"});
+        }
+
 
 
         try {
@@ -1309,8 +1580,14 @@ fastify.post('/api/match/result', { preValidation: [fastify.authenticate] }, asy
             return ({success:false, error:"not_in_room"});
         }
 
-
+        // Check both pong and connect4 match history
         let room_db = await db.get("SELECT * FROM matchs_history WHERE (first_player = ? OR second_player = ?) AND id_room = ? AND winner_id IS NOT NULL ORDER BY id DESC", [user_id, user_id, room_id]);
+        
+        // If no pong match found, check connect4 matches
+        if (!room_db) {
+            room_db = await db.get("SELECT * FROM connect4_online_matchs_history WHERE (first_player = ? OR second_player = ?) AND id_room = ? AND winner_id IS NOT NULL ORDER BY id DESC", [user_id, user_id, room_id]);
+        }
+        
         if (room_db)
         {
             if (room_db.winner_id)
@@ -1345,7 +1622,18 @@ fastify.post('/api/match/result', { preValidation: [fastify.authenticate] }, asy
             return ({success:false, error:"not_in_room"});
         }
 
-        // A FAIRE : verifier si je suis dans une room
+        // A FAIRE : verifier si je suis déja dans la room
+        try {
+            const row = await db.get("SELECT COUNT(*) as count FROM rooms_players WHERE id_player = ? AND id_room = ?", [user_id_to_add, room_id]);
+            nb_invit = Number(row.count);
+            if (nb_invit > 0)
+            {
+                return ({success : false, error : "already_in_room"});
+            }
+        } catch(err)
+        {
+            return ({success : false, error : "db_access"});
+        }
 
         // A FAIRE : verifier qu'il n'y a pas déja une invitation pour ce joueur
         try {
@@ -1358,6 +1646,20 @@ fastify.post('/api/match/result', { preValidation: [fastify.authenticate] }, asy
         } catch(err)
         {
             return ({success : false, error : "db_access"});
+        }
+
+        // A FAIRE : vérifier si le joueur qu'on invite n'est pas déja dans une room
+        let in_room = false;
+        try {
+            room_id = await myRoomId(user_id_to_add);
+            in_room = true;
+        } catch (err)
+        {
+            in_room = false;
+        }
+        if (in_room)
+        {
+            return ({success : false, error : "user_already_in_room"});
         }
 
 
@@ -1417,8 +1719,6 @@ fastify.post('/api/match/result', { preValidation: [fastify.authenticate] }, asy
         }
         return ({success : true});
     });
-
-
 
 
     //  Vérifie si le tournoi dans la room a déja commencé
@@ -1524,7 +1824,6 @@ fastify.post('/api/match/result', { preValidation: [fastify.authenticate] }, asy
         }
 
     });
-
 
 
 

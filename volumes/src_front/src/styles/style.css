@@ -22,7 +22,7 @@ body {
 }
 
 /* Dark Red Neon Navbar */
-nav {
+.page-with-header nav {
   position: fixed;
   top: 0;
   left: 0;
@@ -81,9 +81,14 @@ nav a:hover::after {
   opacity: 1;
 }
 
-/* Écarter le contenu pour ne pas être caché sous le navbar */
-body {
-  padding-top: 80px;
+/* Page with header styling */
+.page-has-header {
+  margin-top: 80px !important; /* Add space for the header */
+}
+
+/* Ensure first elements in pages with headers don't get hidden */
+.page-has-header > *:first-child {
+  padding-top: 20px;
 }
 
 /* Cyberpunk Theme Styles */
@@ -485,4 +490,75 @@ body .sidebar + .flex-1.flex.flex-col {
   border-radius: 1rem;
   border: 2px solid #ff2a6d;
   background: #0a0a16;
+}
+
+/* Game animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { 
+    text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor; 
+  }
+  50% { 
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor; 
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s ease-out forwards;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Cyber border effect */
+.cyber-border {
+  position: relative;
+  border: 2px solid transparent;
+  background: linear-gradient(45deg, rgba(255, 42, 109, 0.1), rgba(5, 217, 232, 0.1));
+  border-radius: 8px;
+}
+
+.cyber-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  background: linear-gradient(45deg, #ff2a6d, #05d9e8);
+  border-radius: inherit;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
 }

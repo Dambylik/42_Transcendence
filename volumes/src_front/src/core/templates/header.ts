@@ -2,13 +2,14 @@ import { Router } from '../../../router/Router';
 
 export function createHeader(router?: Router): string {
   return `
-    <header class="w-full bg-navy-dark py-4 px-8 fixed top-0 left-0 right-0 z-50">
+    <header id="main-header" class="w-full bg-navy-dark py-4 px-8 fixed top-0 left-0 right-0 z-50">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
         <!-- Logo on the left -->
         <div class="flex-shrink-0">        
-        <nav class="space-x-8">
-          <a href="/" data-route="/" class="header-logo text-neon-pink hover:text-neon-cyan transition-colors font-tech tracking-wider uppercase">FT_TRANSCENDENCE</a>
-        </nav>
+          <nav class="space-x-8">
+            <a href="/" data-route="/" class="header-logo text-neon-pink hover:text-neon-cyan transition-colors font-tech tracking-wider uppercase">FT_TRANSCENDENCE</a>
+          </nav>
+        </div>
       </div>
     </header>
   `;

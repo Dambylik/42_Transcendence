@@ -227,7 +227,7 @@ constructor(id: string, router?: Router) {
         this.handleFormSubmit(e);
       });
     } else {
-      console.error('Form not found in setupEventListeners');
+      //console.error('Form not found in setupEventListeners');
     }
   }
 
@@ -342,7 +342,7 @@ constructor(id: string, router?: Router) {
   })
   .then(response => {
     console.log('Registration response status:', response.status);
-    console.log('Response headers:', [...response.headers.entries()]);
+    //console.log('Response headers:', [...response.headers.entries()]);
     
     if (!response.ok) {
       return response.json().then(errorData => {
@@ -352,7 +352,7 @@ constructor(id: string, router?: Router) {
     return response.json();
   })
   .then(data => {
-    console.log('Register successful:', data);
+    //console.log('Register successful:', data);
     this.showSuccess('Registration successful! Redirecting to login...');
     
     setTimeout(() => {
