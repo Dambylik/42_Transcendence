@@ -221,7 +221,7 @@ class RoomPage extends Page {
             await this.showRoomPageWithLocalStorage();
         } else {
             // Je suis déja dans une room dans un onglet
-            alert("Je ne peux rien afficher car je suis déja dans une room dans un onglet");
+            //alert("Je ne peux rien afficher car je suis déja dans une room dans un onglet");
             await this.changeRoomPage("forbidden");
         }
 

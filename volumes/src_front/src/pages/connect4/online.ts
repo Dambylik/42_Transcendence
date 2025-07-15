@@ -284,7 +284,7 @@ class OnlineConnect4Page extends Page {
 			await this.showRoomPageWithLocalStorage();
 		} else {
 			// Je suis déja dans une room dans un onglet
-			alert("Je ne peux rien afficher car je suis déja dans une room dans un onglet");
+			//alert("Je ne peux rien afficher car je suis déja dans une room dans un onglet");
 			await this.changeRoomPage("forbidden");
 		}
 
@@ -346,7 +346,7 @@ const response = await fetch('https://localhost:4430/api/already_in_room', {
 				}
 			} catch (err)
 			{
-					alert("error can show roompage catch");
+					//alert("error can show roompage catch");
 
 				// alert("erreur denvoi changeRoomPageInformationsFinished()");
 				return false;
