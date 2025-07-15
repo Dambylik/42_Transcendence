@@ -25,12 +25,11 @@ The core objective of ft_transcendence is to challenge students with unfamiliar 
 ![Dashboard Overview](https://github.com/Dambylik/42_Transcendence/blob/main/screens/dashboard.png)
 *Main dashboard featuring the cyberpunk-themed interface and game selection*
 
-![Pong Game 3D]
-*3D Pong game rendered with Babylon.js showing real-time multiplayer action*
 | | |
 |:-------------------------:|:-------------------------:|
-| <img width="1230" alt="Screen Shot 2024-05-09 at 12 22 47 PM" src="https://github.com/Dambylik/42_Transcendence/blob/main/screens/pong_levels.png"> | <img width="1245" alt="https://github.com/Dambylik/42_Transcendence/blob/main/screens/pong_ia.png">
-| <img width="1346" alt="Screen Shot 2024-05-09 at 12 47 45 PM" src="https://github.com/Dambylik/42_Transcendence/blob/main/screens/pong_game_over.png"> | <img width="1288" alt="https://github.com/Dambylik/42_Transcendence/blob/main/screens/tournament_invite.png"> |
+| <img width="1230" alt="Screen Shot 2024-05-09 at 12 22 47 PM" src="https://github.com/Dambylik/42_Transcendence/blob/main/screens/pong_levels.png"> | <img width="1245" alt="Screen Shot 2024-05-09 at 12 24 31 PM" src="https://github.com/Dambylik/42_Transcendence/blob/main/screens/pong_ia.png">
+| <img width="1346" alt="Screen Shot 2024-05-09 at 12 47 45 PM" src="https://github.com/Dambylik/42_Transcendence/blob/main/screens/pong_game_over.png"> | <img width="1288" alt="Screen Shot 2024-05-09 at 12 47 45 PM" src="https://github.com/Dambylik/42_Transcendence/blob/main/screens/tournament_invite.png"> |
+*3D Pong game rendered with Babylon.js showing real-time multiplayer action*
 
 
 ![Connect4 Game](https://github.com/Dambylik/42_Transcendence/blob/main/screens/connect_4_1.png)
