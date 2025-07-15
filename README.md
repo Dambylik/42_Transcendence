@@ -15,7 +15,7 @@ The core objective of ft_transcendence is to challenge students with unfamiliar 
 
 ### 📸 Project Screenshots
 
-![Welcome board]([./docs/images/dashboard-overview.png](https://github.com/Dambylik/42_Transcendence/blob/main/screens/entry.png))
+![Welcome board](https://github.com/Dambylik/42_Transcendence/blob/main/screens/entry.png)
 
 | | |
 |:-------------------------:|:-------------------------:|
